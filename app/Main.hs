@@ -11,6 +11,7 @@ import Graphics.Gloss.Interface.Pure.Game as G
 
 import Control.Lens
 import Numeric (readHex)
+import System.Random (initStdGen)
 
 winWidth, winHeight :: Int
 winWidth  = 640
@@ -22,6 +23,7 @@ winSize = (winWidth, winHeight)
 main :: IO ()
 main = do
     (Just rom) <- getRom
+    sd <- initStdGen
 
     play
         (InWindow
@@ -30,7 +32,7 @@ main = do
                 (10, 10))
         (greyN 0.8)
         60
-        (initCpu rom)
+        (initCpu rom sd)
         (`displayScreen` 10)
         getKeyboardInput
         (execState . runEmulator)

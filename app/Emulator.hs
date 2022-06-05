@@ -7,14 +7,17 @@ import Font
 import Data.Bits
 
 import Data.ByteString qualified as BS
+
 import Data.Vector qualified as V
+import Data.Vector (Vector)
+
 import Relude.Extra (bimapBoth)
 
 import Data.List (elemIndex)
-import System.Random (mkStdGen)
+import System.Random (StdGen)
 
-initCpu :: Memory -> Cpu
-initCpu rom = CPU
+initCpu :: Vector Word8 -> StdGen -> Cpu
+initCpu rom sd = CPU
     { _gfx    = blankScreen
     , _i      = 0
     , _memory = font <> V.replicate 0x1B0 0 <> rom <> V.replicate (0xE00 - V.length rom) 0
@@ -24,7 +27,7 @@ initCpu rom = CPU
     , _keypad = V.replicate 16 False
     , _dt     = 0
     , _st     = 0
-    , _seed   = mkStdGen 1
+    , _seed   = sd
     }
 
 runEmulator :: MonadEmulator m => Float -> m ()
