@@ -87,18 +87,18 @@ class Monad m => MonadEmulator m where
     rand :: m Word8
     (.=) :: Ref a -> a -> m ()
     (%=) :: Ref a -> (a -> a) -> m ()
-    (#=) :: Ref a -> m a -> m ()
+    (<~) :: Ref a -> m a -> m ()
     (+=) :: Num a => Ref a -> a -> m ()
     (-=) :: Num a => Ref a -> a -> m ()
     (=:) :: Ref a -> Ref a -> m ()
 
-    ref #= ma  = (ref .=) =<< ma
+    ref <~ ma  = (ref .=) =<< ma
     ref .= val = ref %= const val
     ref += val = ref %= (+val)
     ref -= val = ref %= subtract val
     r1  =: r2  = (r1 .=) =<< look r2
 
-    infix 4 .=, %=, #=, +=, =:
+    infix 4 .=, %=, <~, +=, =:
 
 instance MonadEmulator (State Cpu) where
     look (Gfx x  y) = fromMaybe False . (^?gfx.ix x.ix y) <$> get

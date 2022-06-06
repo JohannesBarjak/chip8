@@ -60,24 +60,20 @@ eval (Jmp  addr) = jmp addr
 eval (Call addr) = do
     push =<< look Pc
     jmp addr
-eval (SkipEq x (NN nn)) = do
-    vx <- look (V x)
-    skipIf (vx == nn)
-eval (SkipEq x (VI y)) = do
-    (vx, vy) <- look2 (V x) (V y)
-    skipIf (vx == vy)
-eval (SkipNotEq x (NN nn)) = do
-    vx <- look (V x)
-    skipIf (vx /= nn)
-eval (SkipNotEq x (VI y)) = do
-    (vx, vy) <- look2 (V x) (V y)
-    skipIf (vx /= vy)
+
+eval (SkipEq    x (NN nn)) = skipIf . (== nn) =<< look (V x)
+eval (SkipEq    x (VI  y)) = skipIf =<< liftR2 (==) (V x) (V y)
+eval (SkipNotEq x (NN nn)) = skipIf . (/= nn) =<< look (V x)
+eval (SkipNotEq x (VI  y)) = skipIf =<< liftR2 (/=) (V x) (V y)
+
 eval (Set x (NN nn)) = V x .= nn
+eval (Set x (VI  y)) = V x =: V y
 eval (Add x (NN nn)) = V x += nn
 eval (Add x (VI y)) = do
     (vx, vy) <- look2 (V x) (V y)
     V x += vy
     vf .= bool 0 1 (vy > (255 - vx))
+
 eval (Sub x  y) = do
     (vx, vy) <- look2 (V x) (V y)
     V x .= vx - vy
@@ -86,6 +82,7 @@ eval (SubN x y) = do
     (vx, vy) <- look2 (V x) (V y)
     V x .= vy - vx
     vf .= bool 1 0 (vx > vy)
+
 eval (ShiftRight x _) = do
     vx <- look (V x)
     V x .= vx `shiftR` 1
@@ -94,20 +91,14 @@ eval (ShiftLeft  x _) = do
     vx <- look (V x)
     V x .= vx `shiftL` 1
     vf .= vx `shiftR` 7
-eval (Set x (VI  y)) = V x =: V y
-eval (Or  x y) = do
-    (vx, vy) <- look2 (V x) (V y)
-    V x .= vx .|. vy
-eval (And x y) = do
-    (vx, vy) <- look2 (V x) (V y)
-    V x .= vx .&. vy
-eval (Xor x y) = do
-    (vx, vy) <- look2 (V x) (V y)
-    V x .= vx `xor` vy
+
+eval (Or  x y) = V x <~ liftR2 (.|.) (V x) (V y)
+eval (And x y) = V x <~ liftR2 (.&.) (V x) (V y)
+eval (Xor x y) = V x <~ liftR2  xor  (V x) (V y)
+
 eval (Index addr) = I .= addr
-eval (Rand x nn) = do
-    rnd <- rand
-    V x .= rnd .&. nn
+eval (Rand  x nn) = V x <~ ((.&. nn) <$> rand)
+
 eval (Draw x y n) = do
     vf .= 0
 
@@ -125,29 +116,37 @@ eval (Draw x y n) = do
             pixel <- look $ Gfx xPos yPos
             setVFIf (write && pixel)
             Gfx xPos yPos .= (write /= pixel)
+
+    where indexBit w s = (w `shiftR` (7 - s)) .&. 1
+
 eval (SkipKey    x) = do
-    vx <- look (V x)
-    skipIf =<< look (Keypad $ fromIntegral vx)
+    vx <- fromIntegral <$> look (V x)
+    skipIf =<< look (Keypad vx)
 eval (SkipNotKey x) = do
-    vx <- look (V x)
-    skipIf . not =<< look (Keypad $ fromIntegral vx)
+    vx <- fromIntegral <$> look (V x)
+    skipIf . not =<< look (Keypad vx)
+
 eval (GetDelay x) = V x =: Dt
 eval (SetDelay x) = Dt =: V x
 eval (Sound    x) = St =: V x
+
 eval (AddIndex x) = do
     vx <- look (V x)
     I += fromIntegral vx
     setVFIf . (> 0xFFF) =<< look I
-eval (Font x) = do
+eval (Font     x) = do
     vx <- look (V x)
     I .= fromIntegral (vx .&. 0xF) * 5
+
 eval (GetKey  x) = do
     keys <- traverse (look . Keypad) [0..15]
     maybe (Pc -= 2) ((V x .=) . fromIntegral) (elemIndex True keys)
 eval (BCDConv x) = do
     (vx, idx) <- look2 (V x) I
     traverse_ ((.=) . Memory . (+ idx) <*> calcDigit vx) [0..2]
-        where calcDigit vx n = (vx `quot` (100 `quot` 10^n)) `rem` 10
+
+    where calcDigit vx n = (vx `quot` (100 `quot` 10^n)) `rem` 10
+
 eval (WriteMemory x) = do
     idx <- look I
     traverse_ ((=:) . Memory . (+ idx) <*> V) [0..x]
@@ -161,14 +160,14 @@ toMemory bs = V.fromList $ BS.unpack bs
 blankScreen :: Screen
 blankScreen = V.replicate 64 $ V.replicate 32 False
 
+liftR2 :: MonadEmulator m => (a -> b -> c) -> Ref a -> Ref b -> m c
+liftR2 f r1 r2 = uncurry f <$> look2 r1 r2
+
 look2 :: MonadEmulator m => Ref a -> Ref b -> m (a, b)
 look2 r1 r2 = liftA2 (,) (look r1) (look r2)
 
 jmp :: MonadEmulator m => Int -> m ()
 jmp = (Pc .=)
-
-indexBit :: (Bits a, Num a) => a -> Int -> a
-indexBit w s = (w `shiftR` (7 - s)) .&. 1
 
 skipIf :: MonadEmulator m => Bool -> m ()
 skipIf b = when b incPc
