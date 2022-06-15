@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NamedFieldPuns, OverloadedLists #-}
 module Main where
 
 import Relude.Unsafe as Unsafe (head)
@@ -10,8 +10,8 @@ import Graphics.Gloss
 import Graphics.Gloss.Interface.Pure.Game as G
 
 import Control.Lens
-import Numeric (readHex)
 import System.Random (initStdGen)
+import Data.Map.Strict (lookup)
 
 winWidth, winHeight :: Int
 winWidth  = 640
@@ -50,29 +50,27 @@ getKeyboardInput (EventKey (Char k) pressed _ _)
     | pressed == G.Down = setKey True
     | pressed == Up     = setKey False
     where
-        setKey b      = maybe id (setKeypad b . key) (keyMap k)
+        setKey b      = maybe id (setKeypad b) (lookup k keyMap)
         setKeypad b n = set (keypad.ix n) b
-        key n         = let [(go,_)] = readHex [n] in go
 getKeyboardInput _ = id
 
-keyMap :: Char -> Maybe Char
-keyMap '1' = Just '1'
-keyMap '2' = Just '2'
-keyMap '3' = Just '3'
-keyMap '4' = Just 'c'
-keyMap 'q' = Just '4'
-keyMap 'w' = Just '5'
-keyMap 'e' = Just '6'
-keyMap 'r' = Just 'd'
-keyMap 'a' = Just '7'
-keyMap 's' = Just '8'
-keyMap 'd' = Just '9'
-keyMap 'f' = Just 'e'
-keyMap 'z' = Just 'a'
-keyMap 'x' = Just '0'
-keyMap 'c' = Just 'b'
-keyMap 'v' = Just 'f'
-keyMap  _  = Nothing
+keyMap :: Map Char Int
+keyMap =
+    [ ('1', 0x1), ('2', 0x2)
+    , ('3', 0x3), ('4', 0xC)
+    , ('q', 0x4), ('Q', 0x4)
+    , ('w', 0x5), ('W', 0x5)
+    , ('e', 0x6), ('E', 0x6)
+    , ('r', 0xD), ('R', 0xD)
+    , ('a', 0x7), ('A', 0x7)
+    , ('s', 0x8), ('S', 0x8)
+    , ('d', 0x9), ('D', 0x9)
+    , ('f', 0xE), ('F', 0xE)
+    , ('z', 0xA), ('Z', 0xA)
+    , ('x', 0x0), ('X', 0x0)
+    , ('c', 0xB), ('C', 0xB)
+    , ('v', 0xF), ('V', 0xF)
+    ]
 
 displayScreen :: Cpu -> Int -> Picture
 displayScreen CPU{_gfx} sc = pictures $ do
