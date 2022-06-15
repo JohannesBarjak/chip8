@@ -19,10 +19,10 @@ type KeyPad = Vector Bool
 data Cpu = CPU
     { _gfx    :: Screen
     , _i      :: Int
-    , _memory :: !Memory
+    , _memory :: Memory
     , _pc     :: Int
     , _stack  :: [Int]
-    , _v      :: !Reg
+    , _v      :: Reg
     , _keypad :: KeyPad
     , _dt     :: Word8
     , _st     :: Word8
