@@ -31,18 +31,18 @@ initCpu rom sd = CPU
 
 runEmulator :: MonadEmulator m => Float -> m ()
 runEmulator t = do
-    forM_ [0..round (t * ips)] $ \ct -> do
+    for_ [0..round (t * ips)] $ \ct -> do
         when (sixtyHz ct) $ do
             checkTimer Dt
             checkTimer St
         emulatorCycle
 
     where ips     = 500
-          fps     = ceiling (ips / 60) :: Integer
+          fps     = ceiling (ips / 60) :: Int
           sixtyHz = (== 0) . (`rem` fps)
           checkTimer tmRef = do
               tm <- look tmRef
-              when (tm > 0) (tmRef .= tm - 1)
+              when (tm > 0) (tmRef -= tm)
 
 emulatorCycle :: MonadEmulator m => m ()
 emulatorCycle = do
