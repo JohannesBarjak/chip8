@@ -9,14 +9,13 @@ import Data.Bits
 import Data.ByteString qualified as BS
 
 import Data.Vector qualified as V
-import Data.Vector (Vector)
 
 import Relude.Extra (bimapBoth)
 
 import Data.List (elemIndex)
 import System.Random (StdGen)
 
-initCpu :: Vector Word8 -> StdGen -> Cpu
+initCpu :: Memory -> StdGen -> Cpu
 initCpu rom sd = CPU
     { _gfx    = blankScreen
     , _i      = 0
