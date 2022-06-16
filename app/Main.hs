@@ -31,11 +31,13 @@ main = do
                 winSize
                 (10, 10))
         (greyN 0.8)
-        60
+        fps
         (initCpu rom sd)
         (`displayScreen` 10)
         getKeyboardInput
-        (execState . runEmulator)
+        (execState . const (runEmulator fps))
+
+        where fps = 60
 
 getRom :: IO (Maybe Memory)
 getRom = do
