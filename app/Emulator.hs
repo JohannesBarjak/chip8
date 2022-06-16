@@ -89,7 +89,7 @@ eval (And x y) = V x <~ liftR2 (.&.) (V x) (V y)
 eval (Xor x y) = V x <~ liftR2  xor  (V x) (V y)
 
 eval (Index addr) = I .= addr
-eval (Rand  x nn) = V x <~ ((.&. nn) <$> rand)
+eval (Rand  x nn) = V x <~ fmap (.&. nn) rand
 
 eval (Draw x y n) = do
     vf .= 0
