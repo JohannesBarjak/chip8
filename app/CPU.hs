@@ -125,7 +125,7 @@ instance MonadEmulator (State Cpu) where
     (%=) (Gfx x  y) = (gfx.ix x.ix y L.%=)
     (%=) Screen     = (gfx L.%=)
     (%=) I          = (i L.%=)
-    (%=) (Memory x) = ((memory.ix x) L.%=)
+    (%=) (Memory x) = (memory.ix x L.%=)
     (%=) Pc         = (pc L.%=)
     (%=) (V x)      = (v.ix x L.%=)
     (%=) (Keypad x) = (keypad.ix x L.%=)
