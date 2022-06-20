@@ -35,9 +35,10 @@ main = do
         (initCpu rom sd)
         (`displayScreen` 10)
         getKeyboardInput
-        (execState . const (runEmulator fps))
+        (execState . const (runEmulator ipc))
 
         where fps = 60
+              ipc = 500 `quot` 60
 
 getRom :: IO (Maybe Memory)
 getRom = do

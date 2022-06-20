@@ -30,12 +30,9 @@ initCpu rom sd = CPU
     }
 
 runEmulator :: MonadEmulator m => Int -> m ()
-runEmulator hz = do
+runEmulator ipc = do
     traverse_ (liftA2 whenM (fmap (> 0) . look) (-= 1)) [Dt, St]
-    replicateM_ fps emulatorCycle
-
-    where ips     = 500
-          fps     = ips `quot` hz
+    replicateM_ ipc emulatorCycle
 
 emulatorCycle :: MonadEmulator m => m ()
 emulatorCycle = do
