@@ -1,33 +1,18 @@
-{-# LANGUAGE TemplateHaskell, GADTs, FlexibleInstances #-}
+{-# LANGUAGE GADTs, FlexibleInstances #-}
 module CPU where
 
 import Data.Bits
-import Control.Lens hiding ((+=), (%=), (.=), (#=))
-import Control.Lens qualified as L
+import Control.Lens (over, both)
 import Numeric (showHex)
 
 import Prelude as P
 
 import Data.Vector (Vector)
-import System.Random (StdGen, Random (random))
 
 type Screen = Vector (Vector Bool)
 type Memory = Vector Word8
 type Reg    = Vector Word8
 type KeyPad = Vector Bool
-
-data Cpu = CPU
-    { _gfx    :: Screen
-    , _i      :: Int
-    , _memory :: Memory
-    , _pc     :: Int
-    , _stack  :: [Int]
-    , _v      :: Reg
-    , _keypad :: KeyPad
-    , _dt     :: Word8
-    , _st     :: Word8
-    , _seed   :: StdGen
-    }
 
 type Nibbles = (Word8, Word8)
 
@@ -64,11 +49,8 @@ data Instruction
 
 data Target = VI Int | NN Word8
 
-makeLenses ''Cpu
-
 data Ref a where
     Gfx    :: Int -> Int -> Ref Bool
-    Screen :: Ref Screen
     I      :: Ref Int
     Memory :: Int -> Ref Word8
     Pc     :: Ref Int
@@ -82,15 +64,16 @@ data Cmd a where
     Pop  :: Cmd Int
 
 class Monad m => MonadEmulator m where
-    look :: Ref a -> m a
-    cmd  :: Cmd a -> m a
-    rand :: m Word8
-    (.=) :: Ref a -> a -> m ()
-    (%=) :: Ref a -> (a -> a) -> m ()
-    (<~) :: Ref a -> m a -> m ()
-    (+=) :: Num a => Ref a -> a -> m ()
-    (-=) :: Num a => Ref a -> a -> m ()
-    (=:) :: Ref a -> Ref a -> m ()
+    look    :: Ref a -> m a
+    cmd     :: Cmd a -> m a
+    rand    :: m Word8
+    clrGfx  :: m ()
+    (.=)    :: Ref a -> a -> m ()
+    (%=)    :: Ref a -> (a -> a) -> m ()
+    (<~)    :: Ref a -> m a -> m ()
+    (+=)    :: Num a => Ref a -> a -> m ()
+    (-=)    :: Num a => Ref a -> a -> m ()
+    (=:)    :: Ref a -> Ref a -> m ()
 
     ref <~ ma  = (ref .=) =<< ma
     ref .= val = ref %= const val
@@ -99,38 +82,6 @@ class Monad m => MonadEmulator m where
     r1  =: r2  = (r1 .=) =<< look r2
 
     infix 4 .=, %=, <~, +=, =:
-
-instance MonadEmulator (State Cpu) where
-    look (Gfx x  y) = fromMaybe False . (^?gfx.ix x.ix y) <$> get
-    look Screen     = use gfx
-    look I          = use i
-    look (Memory x) = do
-        cpu <- get
-        pure (cpu^?!memory.ix x)
-    look Pc         = use pc
-    look (V x)      = do
-        cpu <- get
-        pure (cpu^?!v.ix x)
-    look (Keypad x) = do
-        cpu <- get
-        pure (cpu^?!keypad.ix x)
-    look Dt         = use dt
-    look St         = use st
-
-    rand = zoom seed $ state random
-
-    cmd (Push x) = stack L.%= (x:)
-    cmd Pop      = zoom stack . state $ fromMaybe (error "CPU: empty stack") . P.uncons
-
-    (%=) (Gfx x  y) = (gfx.ix x.ix y L.%=)
-    (%=) Screen     = (gfx L.%=)
-    (%=) I          = (i L.%=)
-    (%=) (Memory x) = (memory.ix x L.%=)
-    (%=) Pc         = (pc L.%=)
-    (%=) (V x)      = (v.ix x L.%=)
-    (%=) (Keypad x) = (keypad.ix x L.%=)
-    (%=) Dt         = (dt L.%=)
-    (%=) St         = (st L.%=)
 
 toInstruction :: Nibbles -> Nibbles -> Instruction
 toInstruction (0x0, 0x0) (0xE, 0x0) = ClearScreen

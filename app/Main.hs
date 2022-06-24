@@ -13,6 +13,8 @@ import Control.Lens
 import System.Random (initStdGen)
 import Data.Map.Strict (lookup)
 
+import Backend.State
+
 winWidth, winHeight :: Int
 winWidth  = 640
 winHeight = 320

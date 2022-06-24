@@ -2,7 +2,6 @@
 module Emulator where
 
 import CPU
-import Font
 
 import Data.Bits
 
@@ -13,21 +12,6 @@ import Data.Vector qualified as V
 import Relude.Extra (bimapBoth)
 
 import Data.List (elemIndex)
-import System.Random (StdGen)
-
-initCpu :: Memory -> StdGen -> Cpu
-initCpu rom sd = CPU
-    { _gfx    = blankScreen
-    , _i      = 0
-    , _memory = font <> V.replicate 0x1B0 0 <> rom <> V.replicate (0xE00 - V.length rom) 0
-    , _pc     = 0x200
-    , _stack  = []
-    , _v      = V.replicate 16 0
-    , _keypad = V.replicate 16 False
-    , _dt     = 0
-    , _st     = 0
-    , _seed   = sd
-    }
 
 runEmulator :: MonadEmulator m => Int -> m ()
 runEmulator ipc = do
@@ -43,7 +27,7 @@ emulatorCycle = do
     eval $ toInstruction (toNib b0) (toNib b1)
 
 eval :: MonadEmulator m => Instruction -> m ()
-eval ClearScreen = Screen .= blankScreen
+eval ClearScreen = clrGfx
 eval Return = jmp =<< pop
 eval (Jmp  addr) = jmp addr
 eval (Call addr) = do
@@ -145,9 +129,6 @@ eval (ReadMemory  x) = do
 
 toMemory :: ByteString -> Memory
 toMemory bs = V.fromList $ BS.unpack bs
-
-blankScreen :: Screen
-blankScreen = V.replicate 64 $ V.replicate 32 False
 
 liftR2 :: MonadEmulator m => (a -> b -> c) -> Ref a -> Ref b -> m c
 liftR2 f r1 r2 = uncurry f <$> look2 r1 r2
