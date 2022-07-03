@@ -157,9 +157,3 @@ toBool _ = True
 
 indexScreen :: Screen -> Int -> Int -> Bool
 indexScreen screen x = (V.!) $ screen V.! x
-
-pop :: MonadEmulator m => m Int
-pop = cmd Pop
-
-push :: MonadEmulator m => Int -> m ()
-push = cmd . Push

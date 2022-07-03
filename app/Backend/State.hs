@@ -57,8 +57,8 @@ instance MonadEmulator (State Cpu) where
 
     rand = zoom seed $ state random
 
-    cmd (Push x) = stack L.%= (x:)
-    cmd Pop      = zoom stack . state $ fromMaybe (error "CPU: empty stack") . P.uncons
+    push x = stack L.%= (x:)
+    pop    = zoom stack . state $ fromMaybe (error "CPU: empty stack") . P.uncons
 
     clrGfx = gfx L..= blankScreen
 

@@ -59,13 +59,10 @@ data Ref a where
     Dt     :: Ref Word8
     St     :: Ref Word8
 
-data Cmd a where
-    Push :: Int -> Cmd ()
-    Pop  :: Cmd Int
-
 class Monad m => MonadEmulator m where
     look    :: Ref a -> m a
-    cmd     :: Cmd a -> m a
+    push    :: Int -> m ()
+    pop     :: m Int
     rand    :: m Word8
     clrGfx  :: m ()
     (.=)    :: Ref a -> a -> m ()
