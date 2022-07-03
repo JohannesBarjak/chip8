@@ -2,12 +2,12 @@
 module CPU where
 
 import Data.Bits
-import Control.Lens (over, both)
 import Numeric (showHex)
 
 import Prelude as P
 
 import Data.Vector (Vector)
+import Relude.Extra (bimapBoth)
 
 type Screen = Vector (Vector Bool)
 type Memory = Vector Word8
@@ -121,7 +121,7 @@ toAddress :: Word8 -> Nibbles -> Int
 toAddress n nn = (fromIntegral n `shiftL` 8) .|. fromIntegral (fromNib nn)
 
 toNib :: Word8 -> Nibbles
-toNib w = over both (.&. 0xF) (w `shiftR` 4, w)
+toNib w = bimapBoth (.&. 0xF) (w `shiftR` 4, w)
 
 fromNib :: Nibbles -> Word8
 fromNib (h, l) = (fromIntegral h `shiftL` 4) .|. fromIntegral l
