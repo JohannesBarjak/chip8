@@ -4,13 +4,7 @@ module Emulator where
 import CPU
 
 import Data.Bits
-
-import Data.ByteString qualified as BS
-
-import Data.Vector qualified as V
-
 import Relude.Extra (bimapBoth)
-
 import Data.List (elemIndex)
 
 runEmulator :: MonadEmulator m => Int -> m ()
@@ -127,9 +121,6 @@ eval (ReadMemory  x) = do
     idx <- look I
     traverse_ ((=:) . V <*> Memory . (+ idx)) [0..x]
 
-toMemory :: ByteString -> Memory
-toMemory bs = V.fromList $ BS.unpack bs
-
 liftR2 :: MonadEmulator m => (a -> b -> c) -> Ref a -> Ref b -> m c
 liftR2 f r1 r2 = uncurry f <$> look2 r1 r2
 
@@ -154,6 +145,3 @@ vf = V 0xF
 toBool :: Word8 -> Bool
 toBool 0 = False
 toBool _ = True
-
-indexScreen :: Screen -> Int -> Int -> Bool
-indexScreen screen x = (V.!) $ screen V.! x

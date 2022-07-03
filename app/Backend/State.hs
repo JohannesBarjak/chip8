@@ -9,6 +9,7 @@ import Font
 import Control.Lens as L
 
 import Data.Vector as V
+import Data.ByteString qualified as BS
 
 data Cpu = CPU
     { _gfx    :: Screen
@@ -73,3 +74,9 @@ instance MonadEmulator (State Cpu) where
 
 blankScreen :: Screen
 blankScreen = V.replicate 64 $ V.replicate 32 False
+
+indexScreen :: Screen -> Int -> Int -> Bool
+indexScreen screen x = (V.!) $ screen V.! x
+
+toMemory :: ByteString -> Memory
+toMemory bs = V.fromList $ BS.unpack bs
