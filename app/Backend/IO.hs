@@ -20,20 +20,20 @@ data Cpu = Cpu
 instance MonadEmulator (ReaderT Cpu IO) where
     look (Gfx x y) = do
         gfx' <- gfx <$> ask
-        read gfx' (indexGfx x y)
+        M.read gfx' (indexGfx x y)
 
     look I  = readIORef . i =<< ask
     look (Memory x) = do
         mem <- memory <$> ask
-        read mem x
+        M.read mem x
 
     look Pc = readIORef . pc =<< ask
     look (V x) = do
         v' <- v <$> ask
-        read v' x
+        M.read v' x
     look (Keypad x) = do
         kpd <- keypad <$> ask
-        read kpd x
+        M.read kpd x
 
     look Dt = readIORef . dt =<< ask
     look St = readIORef . st =<< ask
