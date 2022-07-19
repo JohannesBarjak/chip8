@@ -18,25 +18,17 @@ data Cpu = Cpu
     }
 
 instance MonadEmulator (ReaderT Cpu IO) where
-    look (Gfx x y) = do
-        gfx' <- gfx <$> ask
-        M.read gfx' (indexGfx x y)
-
-    look I  = readIORef . i =<< ask
-    look (Memory x) = do
-        mem <- memory <$> ask
-        M.read mem x
-
-    look Pc = readIORef . pc =<< ask
-    look (V x) = do
-        v' <- v <$> ask
-        M.read v' x
-    look (Keypad x) = do
-        kpd <- keypad <$> ask
-        M.read kpd x
-
-    look Dt = readIORef . dt =<< ask
-    look St = readIORef . st =<< ask
+    look ref = do
+        cpu <- ask
+        case ref of
+            (Gfx x  y) -> M.read (gfx cpu) (indexGfx x y)
+            I          -> readIORef (i cpu)
+            (Memory x) -> M.read (memory cpu) x
+            Pc         -> readIORef (pc cpu)
+            (V x)      -> M.read (v cpu) x
+            (Keypad x) -> M.read (keypad cpu) x
+            Dt         -> readIORef (dt cpu)
+            St         -> readIORef (st cpu)
 
     rand = randomIO
 
