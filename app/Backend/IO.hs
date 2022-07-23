@@ -1,9 +1,12 @@
-{-# LANGUAGE GADTs, FlexibleInstances #-}
+{-# LANGUAGE GADTs, FlexibleInstances, RecordWildCards #-}
 module Backend.IO where
 
 import CPU
 import System.Random (randomIO)
 import Data.Vector.Mutable as M
+
+import Font
+import Data.Vector qualified as V
 
 data Cpu = Cpu
     { gfx    :: IOVector Bool
@@ -16,6 +19,20 @@ data Cpu = Cpu
     , dt     :: IORef Word8
     , st     :: IORef Word8
     }
+
+initCpu :: V.Vector Word8 -> IO Cpu
+initCpu rom = do
+    gfx    <- blankGfx
+    i      <- newIORef 0
+    memory <- V.thaw $ font <> V.replicate 0x1B0 0 <> rom <> V.replicate (0xE00 - V.length rom) 0
+    pc     <- newIORef 0x200
+    stack  <- newIORef []
+    v      <- M.replicate 16 0
+    keypad <- M.replicate 16 False
+    dt     <- newIORef 0
+    st     <- newIORef 0
+
+    pure Cpu {..}
 
 instance MonadEmulator (ReaderT Cpu IO) where
     look ref = do
@@ -44,7 +61,7 @@ instance MonadEmulator (ReaderT Cpu IO) where
 
     clrGfx = do
         gfx' <- gfx <$> ask
-        M.copy gfx' =<< blankGfx
+        M.copy gfx' =<< lift blankGfx
 
     (Gfx x y) %= f = do
         gfx' <- gfx <$> ask
@@ -66,7 +83,7 @@ instance MonadEmulator (ReaderT Cpu IO) where
     St %= f = flip modifyIORef f . st =<< ask
 
 indexGfx :: Num a => a -> a -> a
-indexGfx x y = (y * 32) + x
+indexGfx x y = (x * 32) + y
 
-blankGfx :: ReaderT Cpu IO (IOVector Bool)
-blankGfx = M.replicate (64 * 32) False
+blankGfx :: IO (IOVector Bool)
+blankGfx = M.replicate (64 * 64) False

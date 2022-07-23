@@ -3,17 +3,20 @@ module Main where
 
 import Relude.Unsafe as Unsafe (head)
 
-import CPU
 import Emulator
 
 import Graphics.Gloss
 import Graphics.Gloss.Interface.Pure.Game as G
 
-import Control.Lens
 import System.Random (initStdGen)
 import Data.Map.Strict (lookup)
 
-import Backend.State
+import Backend.IO
+
+import Data.Vector.Mutable qualified as M
+import Graphics.Gloss.Interface.IO.Game (playIO)
+import Data.ByteString qualified as BS
+import qualified Data.Vector as V
 
 winWidth, winHeight :: Int
 winWidth  = 640
@@ -25,39 +28,45 @@ winSize = (winWidth, winHeight)
 main :: IO ()
 main = do
     (Just rom) <- getRom
-    sd <- initStdGen
+    _ <- initStdGen
+    cpu <- initCpu rom
 
-    play
+    playIO
         (InWindow
                "Hello World"
                 winSize
                 (10, 10))
         (greyN 0.8)
         fps
-        (initCpu rom sd)
+        cpu
         (`displayScreen` 10)
         getKeyboardInput
-        (execState . const (runEmulator ipc))
+        (\_ _ -> runReaderT (runEmulator ipc) cpu >> pure cpu)
 
         where fps = 60
               ipc = 500 `quot` 60
 
-getRom :: IO (Maybe Memory)
+getRom :: IO (Maybe (V.Vector Word8))
 getRom = do
     filename <- Unsafe.head <$> getArgs
-    rom <- toMemory <$> readFileBS filename
+    rom <- fromList . BS.unpack <$> readFileBS filename
     pure $ if length rom < 4096 - 512
         then Just rom
         else Nothing
 
-getKeyboardInput :: Event -> Cpu -> Cpu
+getKeyboardInput :: Event -> Cpu -> IO Cpu
 getKeyboardInput (EventKey (Char k) pressed _ _)
     | pressed == G.Down = setKey True
     | pressed == Up     = setKey False
     where
-        setKey b      = maybe id (setKeypad b) (lookup k keyMap)
-        setKeypad b n = set (keypad.ix n) b
-getKeyboardInput _ = id
+        setKey b = maybe pure (setKeypad b) (lookup k keyMap)
+
+        setKeypad :: Bool -> Int -> Cpu -> IO Cpu
+        setKeypad b n cpu@Cpu{keypad} = do
+            M.write keypad n b
+            pure cpu
+
+getKeyboardInput _ = pure
 
 keyMap :: Map Char Int
 keyMap =
@@ -77,14 +86,14 @@ keyMap =
     , ('v', 0xF), ('V', 0xF)
     ]
 
-displayScreen :: Cpu -> Int -> Picture
-displayScreen CPU{_gfx} sc = pictures $ do
+displayScreen :: Cpu -> Int -> IO Picture
+displayScreen Cpu{gfx} sc = fmap pictures . sequence $ do
     x <- [0..63]
     let xPos = x * sc - (winWidth `div` 2)
     y <- [0..31]
     let yPos = (y + 1) * (-sc) + (winHeight `div` 2)
 
-    pure $ pixelImage (fromIntegral xPos) (fromIntegral yPos) sc (indexScreen _gfx x y)
+    pure $ pixelImage (fromIntegral xPos) (fromIntegral yPos) sc <$> M.read gfx (indexGfx x y)
 
 pixelImage :: Float -> Float -> Int -> Bool -> Picture
 pixelImage x y sc p = Color (pixelColor p) square
