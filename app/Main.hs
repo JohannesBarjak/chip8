@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns, OverloadedLists #-}
 module Main where
 
-import Relude.Unsafe as Unsafe (head)
+import Relude.Unsafe as Unsafe
 
 import Emulator
 
