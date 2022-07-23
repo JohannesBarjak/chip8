@@ -6,6 +6,7 @@ import CPU
 import Data.Bits
 import Relude.Extra (bimapBoth)
 import Data.List (elemIndex)
+import Data.Traversable (for)
 
 runEmulator :: MonadEmulator m => Int -> m ()
 runEmulator ipc = do
@@ -72,19 +73,25 @@ eval (Draw x y n) = do
     (vx, vy) <- bimapBoth fromIntegral <$> look2 (V x) (V y)
     idx <- look I
 
-    for_ [0..n - 1] $ \dy -> do
+    dat <- for [0..n - 1] $ \dy -> do
         let yPos = vy + dy
         sprite <- look $ Memory (idx + dy)
 
-        for_ [0..7] $ \dx -> do
+        for [0..7] $ \dx -> do
             let xPos = vx + dx
             let write = toBool (indexBit sprite dx)
 
             pixel <- look $ Gfx xPos yPos
-            setVFIf (write && pixel)
-            Gfx xPos yPos .= (write /= pixel)
+            pure (write, pixel)
+
+    setVFIf . any (any $ uncurry (&&)) $ dat
+    draw dat vx vy
 
     where indexBit w s = (w `shiftR` (7 - s)) .&. 1
+          draw dat vx vy =
+                for_ (zip dat [0..]) $ \(buf, dy) ->
+                    for_ (zip buf [0..]) $ \((write, pixel), dx) ->
+                        Gfx (vx + dx) (vy + dy) .= (write /= pixel)
 
 eval (SkipKey    x) = do
     vx <- fromIntegral <$> look (V x)
