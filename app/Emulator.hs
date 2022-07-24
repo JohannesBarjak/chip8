@@ -73,7 +73,7 @@ eval (Draw x y n) = do
     (vx, vy) <- bimapBoth fromIntegral <$> look2 (V x) (V y)
     idx <- look I
 
-    dat <- for [0..n - 1] $ \dy -> do
+    chunk <- for [0..n - 1] $ \dy -> do
         let yPos = vy + dy
         sprite <- toSprite <$> look (Memory (idx + dy))
 
@@ -83,12 +83,12 @@ eval (Draw x y n) = do
 
         pure $ zip sprite pixels
 
-    setVFIf . any (any $ uncurry (&&)) $ dat
-    draw dat vx vy
+    setVFIf . any (any $ uncurry (&&)) $ chunk
+    draw chunk vx vy
 
     where toSprite sprite = [toBool $ (sprite `shiftR` (7 - idx)) .&. 1 | idx <- [0..7]]
-          draw dat vx vy =
-                for_ (zip dat [0..]) $ \(buf, dy) ->
+          draw chunk vx vy =
+                for_ (zip chunk [0..]) $ \(buf, dy) ->
                     for_ (zip buf [0..]) $ \((write, pixel), dx) ->
                         Gfx (vx + dx) (vy + dy) .= (write /= pixel)
 
