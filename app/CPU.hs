@@ -65,20 +65,26 @@ class Monad m => MonadEmulator m where
     pop      :: m Int
     rand     :: m Word8
     clearGfx :: m ()
-    (.=)     :: Ref a -> a -> m ()
     (%=)     :: Ref a -> (a -> a) -> m ()
-    (<~)     :: Ref a -> m a -> m ()
-    (+=)     :: Num a => Ref a -> a -> m ()
-    (-=)     :: Num a => Ref a -> a -> m ()
-    (=:)     :: Ref a -> Ref a -> m ()
 
-    ref <~ ma  = (ref .=) =<< ma
-    ref .= val = ref %= const val
-    ref += val = ref %= (+val)
-    ref -= val = ref %= subtract val
-    r1  =: r2  = (r1 .=) =<< look r2
+    infix 4 %=
 
-    infix 4 .=, %=, <~, +=, =:
+infix 4 .=, <~, =:, +=, -=
+
+(.=) :: MonadEmulator m => Ref a -> a -> m ()
+ref .= val = ref %= const val
+
+(<~) :: MonadEmulator m => Ref a -> m a -> m ()
+ref <~ ma  = (ref .=) =<< ma
+
+(=:) :: MonadEmulator m => Ref a -> Ref a -> m ()
+r1  =: r2  = (r1 .=) =<< look r2
+
+(+=) :: (MonadEmulator m, Num a) => Ref a -> a -> m ()
+ref += val = ref %= (+val)
+
+(-=) :: (MonadEmulator m, Num a) => Ref a -> a -> m ()
+ref -= val = ref %= subtract val
 
 toInstruction :: Nibbles -> Nibbles -> Instruction
 toInstruction (0x0, 0x0) (0xE, 0x0) = ClearScreen
