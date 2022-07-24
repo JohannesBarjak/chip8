@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Emulator where
+module Emulator (runEmulator) where
 
 import CPU
 

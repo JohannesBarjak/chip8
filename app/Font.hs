@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedLists #-}
-module Font where
+module Font (font) where
 
 import Data.Vector (Vector)
 

@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs, FlexibleInstances, RecordWildCards #-}
-module Backend.IO where
+module Backend.IO (Cpu(..), indexGfx, initCpu) where
 
 import CPU
 import System.Random (randomIO)

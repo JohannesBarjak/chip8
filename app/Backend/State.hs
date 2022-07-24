@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, GADTs #-}
-module Backend.State where
+module Backend.State (Cpu(..), indexScreen, initCpu) where
 
 import Prelude as P
 import System.Random (StdGen, Random (random))

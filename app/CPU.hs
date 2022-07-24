@@ -1,5 +1,13 @@
 {-# LANGUAGE GADTs, FlexibleInstances #-}
-module CPU where
+module CPU
+    ( MonadEmulator(..)
+    , Ref(..)
+    , Instruction(..)
+    , Target(..)
+    , (.=), (<~), (=:), (+=), (-=)
+    , toInstruction
+    , toNib
+    ) where
 
 import Data.Bits
 import Numeric (showHex)
