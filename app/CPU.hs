@@ -4,7 +4,7 @@ module CPU
     , Ref(..)
     , Instruction(..)
     , Target(..)
-    , (.=), (<~), (=:), (+=), (-=)
+    , (<~), (=:), (+=), (-=)
     , toInstruction
     , toNib
     ) where
@@ -67,13 +67,11 @@ class Monad m => MonadEmulator m where
     rand     :: m Word8
     clearGfx :: m ()
     (%=)     :: Ref a -> (a -> a) -> m ()
+    (.=)     :: Ref a -> a -> m ()
 
-    infix 4 %=
+    infix 4 %=, .=
 
-infix 4 .=, <~, =:, +=, -=
-
-(.=) :: MonadEmulator m => Ref a -> a -> m ()
-ref .= val = ref %= const val
+infix 4 <~, =:, +=, -=
 
 (<~) :: MonadEmulator m => Ref a -> m a -> m ()
 ref <~ ma  = (ref .=) =<< ma

@@ -72,6 +72,15 @@ instance MonadEmulator (State Cpu) where
     (%=) Dt         = (dt L.%=)
     (%=) St         = (st L.%=)
 
+    (.=) (Gfx x  y) = (gfx.ix x.ix y L..=)
+    (.=) I          = (i L..=)
+    (.=) (Memory x) = (memory.ix x L..=)
+    (.=) Pc         = (pc L..=)
+    (.=) (V x)      = (v.ix x L..=)
+    (.=) (Keypad x) = (keypad.ix x L..=)
+    (.=) Dt         = (dt L..=)
+    (.=) St         = (st L..=)
+
 blankScreen :: Vector (Vector Bool)
 blankScreen = V.replicate 64 $ V.replicate 32 False
 

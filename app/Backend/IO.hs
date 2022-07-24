@@ -82,6 +82,25 @@ instance MonadEmulator (ReaderT Cpu IO) where
     Dt %= f = flip modifyIORef f . dt =<< ask
     St %= f = flip modifyIORef f . st =<< ask
 
+    (Gfx x y) .= p = do
+        gfx' <- gfx <$> ask
+        M.write gfx' (indexGfx x y) p
+    I .= a = flip writeIORef a . i =<< ask
+    (Memory x) .= b = do
+        mem <- memory <$> ask
+        M.write mem x b
+
+    Pc .= a = flip writeIORef a . pc =<< ask
+    (V x) .= b = do
+        v' <- v <$> ask
+        M.write v' x b
+    (Keypad x) .= k = do
+        kpd <- keypad <$> ask
+        M.write kpd x k
+    
+    Dt .= a = flip writeIORef a . dt =<< ask
+    St .= a = flip writeIORef a . st =<< ask
+
 indexGfx :: Num a => a -> a -> a
 indexGfx x y = (x * 32) + y
 
