@@ -22,7 +22,7 @@ emulatorCycle = do
     eval $ toInstruction (toNib b0) (toNib b1)
 
 eval :: MonadEmulator m => Instruction -> m ()
-eval ClearScreen = clrGfx
+eval ClearScreen = clearGfx
 eval Return = jmp =<< pop
 eval (Jmp  addr) = jmp addr
 eval (Call addr) = do

@@ -59,7 +59,7 @@ instance MonadEmulator (ReaderT Cpu IO) where
         writeIORef s xs
         pure x
 
-    clrGfx = do
+    clearGfx = do
         gfx' <- gfx <$> ask
         M.copy gfx' =<< lift blankGfx
 

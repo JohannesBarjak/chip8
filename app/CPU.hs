@@ -60,17 +60,17 @@ data Ref a where
     St     :: Ref Word8
 
 class Monad m => MonadEmulator m where
-    look    :: Ref a -> m a
-    push    :: Int -> m ()
-    pop     :: m Int
-    rand    :: m Word8
-    clrGfx  :: m ()
-    (.=)    :: Ref a -> a -> m ()
-    (%=)    :: Ref a -> (a -> a) -> m ()
-    (<~)    :: Ref a -> m a -> m ()
-    (+=)    :: Num a => Ref a -> a -> m ()
-    (-=)    :: Num a => Ref a -> a -> m ()
-    (=:)    :: Ref a -> Ref a -> m ()
+    look     :: Ref a -> m a
+    push     :: Int -> m ()
+    pop      :: m Int
+    rand     :: m Word8
+    clearGfx :: m ()
+    (.=)     :: Ref a -> a -> m ()
+    (%=)     :: Ref a -> (a -> a) -> m ()
+    (<~)     :: Ref a -> m a -> m ()
+    (+=)     :: Num a => Ref a -> a -> m ()
+    (-=)     :: Num a => Ref a -> a -> m ()
+    (=:)     :: Ref a -> Ref a -> m ()
 
     ref <~ ma  = (ref .=) =<< ma
     ref .= val = ref %= const val

@@ -61,7 +61,7 @@ instance MonadEmulator (State Cpu) where
     push x = stack L.%= (x:)
     pop    = zoom stack . state $ fromMaybe (error "CPU: empty stack") . P.uncons
 
-    clrGfx = gfx L..= blankScreen
+    clearGfx = gfx L..= blankScreen
 
     (%=) (Gfx x  y) = (gfx.ix x.ix y L.%=)
     (%=) I          = (i L.%=)
