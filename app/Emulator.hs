@@ -75,19 +75,18 @@ eval (Draw x y n) = do
 
     dat <- for [0..n - 1] $ \dy -> do
         let yPos = vy + dy
-        sprite <- look $ Memory (idx + dy)
+        sprite <- toSprite <$> look (Memory (idx + dy))
 
-        for [0..7] $ \dx -> do
+        pixels <- for [0..7] $ \dx -> do
             let xPos = vx + dx
-            let write = toBool (indexBit sprite dx)
+            look $ Gfx xPos yPos
 
-            pixel <- look $ Gfx xPos yPos
-            pure (write, pixel)
+        pure $ zip sprite pixels
 
     setVFIf . any (any $ uncurry (&&)) $ dat
     draw dat vx vy
 
-    where indexBit w s = (w `shiftR` (7 - s)) .&. 1
+    where toSprite sprite = [toBool $ (sprite `shiftR` (7 - idx)) .&. 1 | idx <- [0..7]]
           draw dat vx vy =
                 for_ (zip dat [0..]) $ \(buf, dy) ->
                     for_ (zip buf [0..]) $ \((write, pixel), dx) ->
