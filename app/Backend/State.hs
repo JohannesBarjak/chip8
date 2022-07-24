@@ -12,13 +12,13 @@ import Data.Vector as V
 import Data.ByteString qualified as BS
 
 data Cpu = CPU
-    { _gfx    :: Screen
+    { _gfx    :: Vector (Vector Bool)
     , _i      :: Int
-    , _memory :: Memory
+    , _memory :: Vector Word8
     , _pc     :: Int
     , _stack  :: [Int]
-    , _v      :: Reg
-    , _keypad :: KeyPad
+    , _v      :: Vector Word8
+    , _keypad :: Vector Bool
     , _dt     :: Word8
     , _st     :: Word8
     , _seed   :: StdGen
@@ -26,7 +26,7 @@ data Cpu = CPU
 
 makeLenses ''Cpu
 
-initCpu :: Memory -> StdGen -> Cpu
+initCpu :: Vector Word8 -> StdGen -> Cpu
 initCpu rom sd = CPU
     { _gfx    = blankScreen
     , _i      = 0
@@ -72,11 +72,11 @@ instance MonadEmulator (State Cpu) where
     (%=) Dt         = (dt L.%=)
     (%=) St         = (st L.%=)
 
-blankScreen :: Screen
+blankScreen :: Vector (Vector Bool)
 blankScreen = V.replicate 64 $ V.replicate 32 False
 
-indexScreen :: Screen -> Int -> Int -> Bool
+indexScreen :: Vector (Vector a) -> Int -> Int -> a
 indexScreen screen x = (V.!) $ screen V.! x
 
-toMemory :: ByteString -> Memory
+toMemory :: ByteString -> Vector Word8
 toMemory bs = V.fromList $ BS.unpack bs

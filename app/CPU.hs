@@ -5,14 +5,7 @@ import Data.Bits
 import Numeric (showHex)
 
 import Prelude as P
-
-import Data.Vector (Vector)
 import Relude.Extra (bimapBoth)
-
-type Screen = Vector (Vector Bool)
-type Memory = Vector Word8
-type Reg    = Vector Word8
-type KeyPad = Vector Bool
 
 type Nibbles = (Word8, Word8)
 
