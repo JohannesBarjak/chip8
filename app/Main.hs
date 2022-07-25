@@ -16,7 +16,6 @@ import Backend.IO
 import Data.Vector.Mutable qualified as M
 import Graphics.Gloss.Interface.IO.Game (playIO)
 import Data.ByteString qualified as BS
-import qualified Data.Vector as V
 
 winWidth, winHeight :: Int
 winWidth  = 640
@@ -27,7 +26,7 @@ winSize = (winWidth, winHeight)
 
 main :: IO ()
 main = do
-    (Just rom) <- getRom
+    (Just rom) <- fmap (fromList . BS.unpack) <$> getRom
     _ <- initStdGen
     cpu <- initCpu rom
 
@@ -46,11 +45,11 @@ main = do
         where fps = 60
               ipc = 500 `quot` 60
 
-getRom :: IO (Maybe (V.Vector Word8))
+getRom :: IO (Maybe ByteString)
 getRom = do
     filename <- Unsafe.head <$> getArgs
-    rom <- fromList . BS.unpack <$> readFileBS filename
-    pure $ if length rom < 4096 - 512
+    rom <- readFileBS filename
+    pure $ if BS.length rom < 4096 - 512
         then Just rom
         else Nothing
 
