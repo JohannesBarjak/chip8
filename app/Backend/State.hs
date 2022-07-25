@@ -9,7 +9,6 @@ import Font
 import Control.Lens as L
 
 import Data.Vector as V
-import Data.ByteString qualified as BS
 
 data Cpu = CPU
     { _gfx    :: Vector (Vector Bool)
@@ -86,6 +85,3 @@ blankScreen = V.replicate 64 $ V.replicate 32 False
 
 indexScreen :: Vector (Vector a) -> Int -> Int -> a
 indexScreen screen x = (V.!) $ screen V.! x
-
-toMemory :: ByteString -> Vector Word8
-toMemory bs = V.fromList $ BS.unpack bs
