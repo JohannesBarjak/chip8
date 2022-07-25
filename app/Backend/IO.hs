@@ -63,43 +63,37 @@ instance MonadEmulator (ReaderT Cpu IO) where
         gfx' <- gfx <$> ask
         M.copy gfx' =<< lift blankGfx
 
-    (Gfx x y) %= f = do
-        gfx' <- gfx <$> ask
-        M.modify gfx' f (indexGfx x y)
+    (Gfx x y) %= f = modifyCpuMemory gfx f (indexGfx x y)
     I  %= f = flip modifyIORef f . i =<< ask
-    (Memory x) %= f = do
-        mem <- memory <$> ask
-        M.modify mem f x
+    (Memory x) %= f = modifyCpuMemory memory f x
 
     Pc %= f = flip modifyIORef f . pc =<< ask
-    (V x) %= f = do
-        v' <- v <$> ask
-        M.modify v' f x
-    (Keypad x) %= f = do
-        kpd <- keypad <$> ask
-        M.modify kpd f x
+    (V x) %= f = modifyCpuMemory v f x
+    (Keypad x) %= f = modifyCpuMemory keypad f x
 
     Dt %= f = flip modifyIORef f . dt =<< ask
     St %= f = flip modifyIORef f . st =<< ask
 
-    (Gfx x y) .= p = do
-        gfx' <- gfx <$> ask
-        M.write gfx' (indexGfx x y) p
+    (Gfx x y) .= p = writeCpuMemory gfx p (indexGfx x y)
     I .= a = flip writeIORef a . i =<< ask
-    (Memory x) .= b = do
-        mem <- memory <$> ask
-        M.write mem x b
+    (Memory x) .= b = writeCpuMemory memory b x
 
     Pc .= a = flip writeIORef a . pc =<< ask
-    (V x) .= b = do
-        v' <- v <$> ask
-        M.write v' x b
-    (Keypad x) .= k = do
-        kpd <- keypad <$> ask
-        M.write kpd x k
+    (V x) .= b = writeCpuMemory v b x
+    (Keypad x) .= k = writeCpuMemory keypad k x
     
     Dt .= a = flip writeIORef a . dt =<< ask
     St .= a = flip writeIORef a . st =<< ask
+
+modifyCpuMemory :: (Cpu -> IOVector a) -> (a -> a) -> Int -> ReaderT Cpu IO ()
+modifyCpuMemory r f i = do
+    m <- r <$> ask
+    M.modify m f i
+
+writeCpuMemory :: (Cpu -> IOVector a) -> a -> Int -> ReaderT Cpu IO ()
+writeCpuMemory r a' i = do
+    m <- r <$> ask
+    M.write m i a'
 
 indexGfx :: Num a => a -> a -> a
 indexGfx x y = (x * 32) + y
