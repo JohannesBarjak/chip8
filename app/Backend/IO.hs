@@ -2,7 +2,7 @@
 module Backend.IO (Cpu(..), indexGfx, initCpu) where
 
 import CPU
-import System.Random (randomIO)
+import System.Random (StdGen, random)
 import Data.Vector.Mutable as M
 
 import Font
@@ -18,10 +18,11 @@ data Cpu = Cpu
     , keypad :: IOVector Bool
     , dt     :: IORef Word8
     , st     :: IORef Word8
+    , seed   :: IORef StdGen
     }
 
-initCpu :: V.Vector Word8 -> IO Cpu
-initCpu rom = do
+initCpu :: V.Vector Word8 -> StdGen -> IO Cpu
+initCpu rom sd = do
     gfx    <- blankGfx
     i      <- newIORef 0
     memory <- V.thaw $ font <> V.replicate 0x1B0 0 <> rom <> V.replicate (0xE00 - V.length rom) 0
@@ -31,6 +32,7 @@ initCpu rom = do
     keypad <- M.replicate 16 False
     dt     <- newIORef 0
     st     <- newIORef 0
+    seed   <- newIORef sd
 
     pure Cpu {..}
 
@@ -47,7 +49,11 @@ instance MonadEmulator (ReaderT Cpu IO) where
             Dt         -> readIORef (dt cpu)
             St         -> readIORef (st cpu)
 
-    rand = randomIO
+    rand = do
+        sd <- seed <$> ask
+        (v, sd') <- random <$> readIORef sd
+        writeIORef sd sd'
+        pure v
 
     push a = do
         s <- stack <$> ask

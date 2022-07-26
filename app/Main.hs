@@ -27,8 +27,8 @@ winSize = (winWidth, winHeight)
 main :: IO ()
 main = do
     (Just rom) <- fmap (fromList . BS.unpack) <$> getRom
-    _ <- initStdGen
-    cpu <- initCpu rom
+    sd <- initStdGen
+    cpu <- initCpu rom sd
 
     playIO
         (InWindow
