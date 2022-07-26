@@ -95,8 +95,8 @@ writeCpuMemory r a' i = do
     m <- r <$> ask
     M.write m i a'
 
-indexGfx :: Num a => a -> a -> a
-indexGfx x y = (x * 32) + y
+indexGfx :: Integral a => a -> a -> a
+indexGfx x y = ((x `rem` 64) * 32) + (y `rem` 32)
 
 blankGfx :: IO (IOVector Bool)
-blankGfx = M.replicate (64 * 64) False
+blankGfx = M.replicate (64 * 32) False
