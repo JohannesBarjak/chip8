@@ -3,7 +3,7 @@ module CPU
     ( MonadEmulator(..)
     , Ref(..)
     , Instruction(..)
-    , Target(..)
+    , Source(..)
     , (<~), (=:), (+=), (-=)
     , toInstruction
     , toNib
@@ -22,14 +22,14 @@ data Instruction
     | Return
     | Jmp Int
     | Call Int
-    | SkipEq Int Target
-    | SkipNotEq Int Target
+    | SkipEq Int Source
+    | SkipNotEq Int Source
     | SkipKey Int
     | SkipNotKey Int
-    | Set Int Target
+    | Set Int Source
     | Sub Int Int
     | SubN Int Int
-    | Add Int Target
+    | Add Int Source
     | ShiftRight Int Int
     | ShiftLeft Int Int
     | Or Int Int
@@ -48,7 +48,7 @@ data Instruction
     | WriteMemory Int
     | ReadMemory Int
 
-data Target = VI Int | NN Word8
+data Source = VI Int | NN Word8
 
 data Ref a where
     Gfx    :: Int -> Int -> Ref Bool
