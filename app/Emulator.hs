@@ -76,21 +76,18 @@ eval (Draw x y n) = do
     chunk <- for [0..n - 1] $ \dy -> do
         let yPos = vy + dy
         sprite <- toSprite <$> look (Memory (idx + dy))
-
-        pixels <- for [0..7] $ \dx -> do
-            let xPos = vx + dx
-            look $ Gfx xPos yPos
+        pixels <- traverse (look . flip Gfx yPos) [vx..vx + 7]
 
         pure $ zip sprite pixels
 
-    setVFIf . any (any $ uncurry (&&)) $ chunk
+    setVFIf $ any (any $ uncurry (&&)) chunk
     draw chunk vx vy
 
-    where toSprite sprite = [toBool $ (sprite `shiftR` (7 - idx)) .&. 1 | idx <- [0..7]]
+    where toSprite sprite = [toBool $ (sprite `shiftR` idx) .&. 1 | idx <- [7,6..0]]
           draw chunk vx vy =
-                for_ (zip chunk [0..]) $ \(buf, dy) ->
-                    for_ (zip buf [0..]) $ \((write, pixel), dx) ->
-                        Gfx (vx + dx) (vy + dy) .= (write /= pixel)
+                for_ (zip chunk [vy..]) $ \(buf, yPos) ->
+                    for_ (zip buf [vx..]) $ \((write, pixel), xPos) ->
+                        Gfx xPos yPos .= (write /= pixel)
 
 eval (SkipKey    x) = do
     vx <- fromIntegral <$> look (V x)
