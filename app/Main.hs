@@ -18,6 +18,8 @@ import Graphics.Gloss.Interface.IO.Game (playIO)
 import Data.ByteString qualified as BS
 import Relude.Extra (bimapBoth)
 
+import CPU
+
 winWidth, winHeight :: Int
 winWidth  = 640
 winHeight = 320
@@ -39,9 +41,9 @@ main = do
         (greyN 0.8)
         fps
         cpu
-        (`displayScreen` 10)
+        (runReaderT (displayScreen 10))
         getKeyboardInput
-        (\_ _ -> runReaderT (runEmulator ipc) cpu >> pure cpu)
+        (const . liftA2 (<$) id $ runReaderT (runEmulator ipc))
 
         where fps = 60
               ipc = 500 `quot` 60
@@ -86,14 +88,14 @@ keyMap =
     , ('v', 0xF), ('V', 0xF)
     ]
 
-displayScreen :: Cpu -> Int -> IO Picture
-displayScreen Cpu{gfx} sc = fmap pictures . sequence $ do
+displayScreen :: MonadEmulator m => Int -> m Picture
+displayScreen sc = fmap pictures . sequence $ do
     x <- [0..63]
     let xPos = x * sc - (winWidth `div` 2)
     y <- [0..31]
     let yPos = (y + 1) * (-sc) + (winHeight `div` 2)
 
-    pure $ pixelImage xPos yPos sc <$> M.read gfx (indexGfx x y)
+    pure $ pixelImage xPos yPos sc <$> look (Gfx x y)
 
 pixelImage :: Int -> Int -> Int -> Bool -> Picture
 pixelImage x y s p = Color (pixelColor p) square
