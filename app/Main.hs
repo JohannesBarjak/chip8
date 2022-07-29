@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns, OverloadedLists #-}
+{-# LANGUAGE OverloadedLists #-}
 module Main where
 
 import Relude.Unsafe as Unsafe
@@ -6,14 +6,13 @@ import Relude.Unsafe as Unsafe
 import Emulator
 
 import Graphics.Gloss
-import Graphics.Gloss.Interface.Pure.Game as G
+import Graphics.Gloss.Interface.Pure.Game
 
 import System.Random (initStdGen)
 import Data.Map.Strict (lookup)
 
 import Backend.IO
 
-import Data.Vector.Mutable qualified as M
 import Graphics.Gloss.Interface.IO.Game (playIO)
 import Data.ByteString qualified as BS
 import Relude.Extra (bimapBoth)
@@ -42,8 +41,8 @@ main = do
         fps
         cpu
         (runReaderT (displayScreen 10))
-        getKeyboardInput
-        (const . liftA2 (<$) id $ runReaderT (runEmulator ipc))
+        (\e c -> runReaderT (getKeyboardInput e) c $> c)
+        (const $ \c -> runReaderT (runEmulator ipc) c $> c)
 
         where fps = 60
               ipc = 500 `quot` 60
@@ -56,19 +55,11 @@ getRom = do
         then Just rom
         else Nothing
 
-getKeyboardInput :: Event -> Cpu -> IO Cpu
-getKeyboardInput (EventKey (Char k) pressed _ _)
-    | pressed == G.Down = setKey True
-    | pressed == Up     = setKey False
-    where
-        setKey b = maybe pure (setKeypad b) (lookup k keyMap)
+getKeyboardInput :: MonadEmulator m => Event -> m ()
+getKeyboardInput (EventKey (Char k) pressed _ _) = setKey (pressed /= Up)
+    where setKey b = whenJust (lookup k keyMap) $ \x -> Keypad x .= b
 
-        setKeypad :: Bool -> Int -> Cpu -> IO Cpu
-        setKeypad b n cpu@Cpu{keypad} = do
-            M.write keypad n b
-            pure cpu
-
-getKeyboardInput _ = pure
+getKeyboardInput _ = pure ()
 
 keyMap :: Map Char Int
 keyMap =
