@@ -16,6 +16,7 @@ import Backend.IO
 import Data.Vector.Mutable qualified as M
 import Graphics.Gloss.Interface.IO.Game (playIO)
 import Data.ByteString qualified as BS
+import Relude.Extra (bimapBoth)
 
 winWidth, winHeight :: Int
 winWidth  = 640
@@ -92,11 +93,10 @@ displayScreen Cpu{gfx} sc = fmap pictures . sequence $ do
     y <- [0..31]
     let yPos = (y + 1) * (-sc) + (winHeight `div` 2)
 
-    pure $ pixelImage (fromIntegral xPos) (fromIntegral yPos) sc <$> M.read gfx (indexGfx x y)
+    pure $ pixelImage xPos yPos sc <$> M.read gfx (indexGfx x y)
 
-pixelImage :: Float -> Float -> Int -> Bool -> Picture
-pixelImage x y sc p = Color (pixelColor p) square
-    where pixelColor True  = white
-          pixelColor False = black
-          s      = fromIntegral sc
-          square = Polygon [(x, y), (x, y + s), (x + s, y + s), (x + s, y)]
+pixelImage :: Int -> Int -> Int -> Bool -> Picture
+pixelImage x y s p = Color (pixelColor p) square
+    where pixelColor = bool black white
+          square = Polygon $ map (bimapBoth fromIntegral)
+            [(x, y), (x, y + s), (x + s, y + s), (x + s, y)]
