@@ -1,8 +1,6 @@
 {-# LANGUAGE OverloadedLists #-}
 module Main where
 
-import Relude.Unsafe as Unsafe
-
 import Emulator
 
 import Graphics.Gloss
@@ -28,7 +26,12 @@ winSize = (winWidth, winHeight)
 
 main :: IO ()
 main = do
-    (Just rom) <- fmap (fromList . BS.unpack) <$> getRom
+    filename <- maybe (error "Enter a rom file") head . nonEmpty <$> getArgs
+
+    rom <- flip fmap (getRom filename) $ \case
+            Just rom -> fromList $ BS.unpack rom
+            Nothing  -> error $ show filename <> ": Exceeds chip8's memory capacity"
+
     sd  <- initStdGen
     cpu <- initial rom sd
 
@@ -47,9 +50,8 @@ main = do
         where fps = 60
               ipc = 500 `quot` 60
 
-getRom :: IO (Maybe ByteString)
-getRom = do
-    filename <- Unsafe.head <$> getArgs
+getRom :: MonadIO m => FilePath -> m (Maybe ByteString)
+getRom filename = do
     rom <- readFileBS filename
     pure $ if BS.length rom < 4096 - 512
         then Just rom
