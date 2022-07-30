@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs, FlexibleInstances, RecordWildCards #-}
-module Backend.IO (Cpu(..), indexGfx, initCpu) where
+module Backend.IO (initial) where
 
 import CPU
 import System.Random (StdGen, random)
@@ -21,8 +21,8 @@ data Cpu = Cpu
     , seed   :: IORef StdGen
     }
 
-initCpu :: V.Vector Word8 -> StdGen -> IO Cpu
-initCpu rom sd = do
+initial :: V.Vector Word8 -> StdGen -> IO Cpu
+initial rom sd = do
     gfx    <- blankGfx
     i      <- newIORef 0
     memory <- V.thaw $ font <> V.replicate 0x1B0 0 <> rom <> V.replicate (0xE00 - V.length rom) 0

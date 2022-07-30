@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, GADTs #-}
-module Backend.State (Cpu(..), indexScreen, initCpu) where
+module Backend.State (initial) where
 
 import Prelude as P
 import System.Random (StdGen, Random (random))
@@ -10,7 +10,7 @@ import Control.Lens as L
 
 import Data.Vector as V
 
-data Cpu = CPU
+data Cpu = Cpu
     { _gfx    :: Vector (Vector Bool)
     , _i      :: Int
     , _memory :: Vector Word8
@@ -25,8 +25,8 @@ data Cpu = CPU
 
 makeLenses ''Cpu
 
-initCpu :: Vector Word8 -> StdGen -> Cpu
-initCpu rom sd = CPU
+initial :: Vector Word8 -> StdGen -> Cpu
+initial rom sd = Cpu
     { _gfx    = blankScreen
     , _i      = 0
     , _memory = font <> V.replicate 0x1B0 0 <> rom <> V.replicate (0xE00 - V.length rom) 0
@@ -82,6 +82,3 @@ instance MonadEmulator (State Cpu) where
 
 blankScreen :: Vector (Vector Bool)
 blankScreen = V.replicate 64 $ V.replicate 32 False
-
-indexScreen :: Vector (Vector a) -> Int -> Int -> a
-indexScreen screen x = (V.!) $ screen V.! x
