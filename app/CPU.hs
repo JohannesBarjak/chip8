@@ -36,6 +36,7 @@ data Instruction
     | And Int Int
     | Xor Int Int
     | Index Int
+    | JmpOff Int Int
     | Rand Int Word8
     | Draw Int Int Int
     | GetDelay Int
@@ -110,6 +111,7 @@ toInstruction (0x8,   x) (y,   0x7) = SubN (fromIntegral x) (fromIntegral y)
 toInstruction (0x8,   x) (y,   0xE) = ShiftLeft  (fromIntegral x) (fromIntegral y)
 toInstruction (0x9,   x) (y,   0x0) = SkipNotEq  (fromIntegral x) (VI $ fromIntegral y)
 toInstruction (0xA,   n) nn         = Index (toAddress n nn)
+toInstruction (0xB,   x) nn         = JmpOff (fromIntegral x) (toAddress x nn)
 toInstruction (0xC,   x) nn         = Rand  (fromIntegral x) (fromNib nn)
 toInstruction (0xD,   x) (y,     n) = Draw  (fromIntegral x) (fromIntegral y) (fromIntegral n)
 toInstruction (0xE,   x) (0x9, 0xE) = SkipKey     (fromIntegral x)
