@@ -38,10 +38,10 @@ main = do
 
     if (args !!? 2) == Just "s" then do
         let cpu = B.St.initial rom sd
-        runChip8 (runIO @(State B.St.Cpu)) cpu
+        runChip8 (runIO @StateEmulator) cpu
         else do
         cpu <- B.IO.initial rom sd
-        runChip8 (runIO @(ReaderT B.IO.Cpu IO)) cpu
+        runChip8 (runIO @IOEmulator) cpu
 
 runChip8 :: MonadEmulator m => (forall a. m a -> EmState m -> IO (a, EmState m)) -> EmState m -> IO ()
 runChip8 run cpu =

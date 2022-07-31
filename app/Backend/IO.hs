@@ -1,5 +1,5 @@
-{-# LANGUAGE GADTs, FlexibleInstances, RecordWildCards, TypeFamilies #-}
-module Backend.IO (Cpu, initial) where
+{-# LANGUAGE GADTs, FlexibleInstances, RecordWildCards, TypeFamilies, GeneralisedNewtypeDeriving #-}
+module Backend.IO (Cpu, IOEmulator, initial) where
 
 import CPU
 import System.Random (StdGen, random)
@@ -36,16 +36,19 @@ initial rom sd = do
 
     pure Cpu {..}
 
-instance MonadEmulator (ReaderT Cpu IO) where
-    type EmState (ReaderT Cpu IO) = Cpu
+newtype IOEmulator a = IOEmulator (ReaderT Cpu IO a)
+    deriving (Functor, Applicative, Monad, MonadIO, MonadReader Cpu, MonadFail)
 
-    runIO r c = do
+instance MonadEmulator IOEmulator where
+    type EmState IOEmulator = Cpu
+
+    runIO (IOEmulator r) c = do
         a <- liftIO $ runReaderT r c
         pure (a, c)
 
     look ref = do
         cpu <- ask
-        case ref of
+        liftIO $ case ref of
             (Gfx x  y) -> M.read (gfx cpu) (indexGfx x y)
             I          -> readIORef (i cpu)
             (Memory x) -> M.read (memory cpu) x
@@ -73,7 +76,7 @@ instance MonadEmulator (ReaderT Cpu IO) where
 
     clearGfx = do
         gfx' <- gfx <$> ask
-        M.copy gfx' =<< lift blankGfx
+        liftIO $ M.copy gfx' =<< blankGfx
 
     (Gfx x y) %= f = modifyCpuMemory gfx f (indexGfx x y)
     I  %= f = flip modifyIORef f . i =<< ask
@@ -97,15 +100,15 @@ instance MonadEmulator (ReaderT Cpu IO) where
     Dt .= a = flip writeIORef a . dt =<< ask
     St .= a = flip writeIORef a . st =<< ask
 
-modifyCpuMemory :: (Cpu -> IOVector a) -> (a -> a) -> Int -> ReaderT Cpu IO ()
+modifyCpuMemory :: (Cpu -> IOVector a) -> (a -> a) -> Int -> IOEmulator ()
 modifyCpuMemory r f i = do
     m <- r <$> ask
-    M.modify m f i
+    liftIO $ M.modify m f i
 
-writeCpuMemory :: (Cpu -> IOVector a) -> a -> Int -> ReaderT Cpu IO ()
+writeCpuMemory :: (Cpu -> IOVector a) -> a -> Int -> IOEmulator ()
 writeCpuMemory r a' i = do
     m <- r <$> ask
-    M.write m i a'
+    liftIO $ M.write m i a'
 
 indexGfx :: Integral a => a -> a -> a
 indexGfx x y = ((x `rem` 64) * 32) + (y `rem` 32)

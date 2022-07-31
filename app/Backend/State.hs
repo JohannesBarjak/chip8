@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, GADTs, TypeFamilies #-}
-module Backend.State (Cpu, initial) where
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, GADTs, TypeFamilies, GeneralisedNewtypeDeriving #-}
+module Backend.State (Cpu, StateEmulator, initial) where
 
 import Prelude as P
 import System.Random (StdGen, Random (random))
@@ -39,50 +39,53 @@ initial rom sd = Cpu
     , _seed   = sd
     }
 
-instance MonadEmulator (State Cpu) where
-    type EmState (State Cpu) = Cpu
+newtype StateEmulator a = StateEmulator (State Cpu a)
+    deriving (Functor, Applicative, Monad)
 
-    runIO s c = pure $ runState s c
+instance MonadEmulator StateEmulator where
+    type EmState StateEmulator = Cpu
 
-    look (Gfx x  y) = fromMaybe False . (^?gfx.ix x.ix y) <$> get
-    look I          = use i
-    look (Memory x) = do
+    runIO (StateEmulator s) c = pure $ runState s c
+
+    look r = StateEmulator $ do
         cpu <- get
-        pure (cpu^?!memory.ix x)
-    look Pc         = use pc
-    look (V x)      = do
-        cpu <- get
-        pure (cpu^?!v.ix x)
-    look (Keypad x) = do
-        cpu <- get
-        pure (cpu^?!keypad.ix x)
-    look Dt         = use dt
-    look St         = use st
+        case r of
+            (Gfx x  y) -> fromMaybe False . (^?gfx.ix x.ix y) <$> get
+            I          -> use i
+            (Memory x) -> pure (cpu^?!memory.ix x)
+            Pc         -> use pc
+            (V x)      -> pure (cpu^?!v.ix x)
+            (Keypad x) -> pure (cpu^?!keypad.ix x)
+            Dt         -> use dt
+            St         -> use st
 
-    rand = zoom seed $ state random
+    rand = StateEmulator $ zoom seed $ state random
 
-    push x = stack L.%= (x:)
-    pop    = zoom stack . state $ fromMaybe (error "CPU: empty stack") . P.uncons
+    push x = StateEmulator $ stack L.%= (x:)
+    pop    = StateEmulator $ zoom stack . state $
+        fromMaybe (error "CPU: empty stack") . P.uncons
 
-    clearGfx = gfx L..= blankScreen
+    clearGfx = StateEmulator $ gfx L..= blankScreen
 
-    (%=) (Gfx x  y) = (gfx.ix x.ix y L.%=)
-    (%=) I          = (i L.%=)
-    (%=) (Memory x) = (memory.ix x L.%=)
-    (%=) Pc         = (pc L.%=)
-    (%=) (V x)      = (v.ix x L.%=)
-    (%=) (Keypad x) = (keypad.ix x L.%=)
-    (%=) Dt         = (dt L.%=)
-    (%=) St         = (st L.%=)
+    r %= f = StateEmulator $ case r of
+        (Gfx x  y) -> gfx.ix x.ix y L.%= f
+        I          -> i L.%= f
+        (Memory x) -> memory.ix x L.%= f
+        Pc         -> pc L.%= f
+        (V x)      -> v.ix x L.%= f
+        (Keypad x) -> keypad.ix x L.%= f
+        Dt         -> dt L.%= f
+        St         -> st L.%= f
 
-    (.=) (Gfx x  y) = (gfx.ix x.ix y L..=)
-    (.=) I          = (i L..=)
-    (.=) (Memory x) = (memory.ix x L..=)
-    (.=) Pc         = (pc L..=)
-    (.=) (V x)      = (v.ix x L..=)
-    (.=) (Keypad x) = (keypad.ix x L..=)
-    (.=) Dt         = (dt L..=)
-    (.=) St         = (st L..=)
+    r .= f = StateEmulator $ case r of
+        (Gfx x  y) -> gfx.ix x.ix y L..= f
+        I          -> i L..= f
+        (Memory x) -> memory.ix x L..= f
+        Pc         -> pc L..= f
+        (V x)      -> v.ix x L..= f
+        (Keypad x) -> keypad.ix x L..= f
+        Dt         -> dt L..= f
+        St         -> st L..= f
 
 blankScreen :: Vector (Vector Bool)
 blankScreen = V.replicate 64 $ V.replicate 32 False
