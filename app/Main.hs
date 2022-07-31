@@ -58,7 +58,7 @@ runChip8 run cpu =
         (const $ fmap snd . run (runEmulator ipc))
 
         where fps = 60
-              ipc = 500 `quot` 60
+              ipc = 500 `quot` fps
 
 getRom :: MonadIO m => FilePath -> m (Maybe ByteString)
 getRom filename = do
