@@ -1,5 +1,5 @@
-{-# LANGUAGE GADTs, FlexibleInstances, RecordWildCards #-}
-module Backend.IO (initial) where
+{-# LANGUAGE GADTs, FlexibleInstances, RecordWildCards, TypeFamilies #-}
+module Backend.IO (Cpu, initial) where
 
 import CPU
 import System.Random (StdGen, random)
@@ -37,6 +37,12 @@ initial rom sd = do
     pure Cpu {..}
 
 instance MonadEmulator (ReaderT Cpu IO) where
+    type EmState (ReaderT Cpu IO) = Cpu
+
+    runIO r c = do
+        a <- liftIO $ runReaderT r c
+        pure (a, c)
+
     look ref = do
         cpu <- ask
         case ref of

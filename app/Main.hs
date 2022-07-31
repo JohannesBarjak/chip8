@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedLists, TypeApplications, RankNTypes #-}
 module Main where
 
 import Emulator
@@ -9,7 +9,8 @@ import Graphics.Gloss.Interface.Pure.Game
 import System.Random (initStdGen)
 import Data.Map.Strict (lookup)
 
-import Backend.IO
+import Backend.State as B.St
+import Backend.IO as B.IO
 
 import Graphics.Gloss.Interface.IO.Game (playIO)
 import Data.ByteString qualified as BS
@@ -26,26 +27,35 @@ winSize = (winWidth, winHeight)
 
 main :: IO ()
 main = do
-    filename <- maybe (error "Enter a rom file") head . nonEmpty <$> getArgs
+    args <- getArgs
+    let filename = maybe (error "Enter a rom file") head $ nonEmpty args
 
     rom <- flip fmap (getRom filename) $ \case
             Just rom -> fromList $ BS.unpack rom
             Nothing  -> error $ show filename <> ": Exceeds chip8's memory capacity"
 
     sd  <- initStdGen
-    cpu <- initial rom sd
 
+    if (args !!? 2) == Just "s" then do
+        let cpu = B.St.initial rom sd
+        runChip8 (runIO @(State B.St.Cpu)) cpu
+        else do
+        cpu <- B.IO.initial rom sd
+        runChip8 (runIO @(ReaderT B.IO.Cpu IO)) cpu
+
+runChip8 :: MonadEmulator m => (forall a. m a -> EmState m -> IO (a, EmState m)) -> EmState m -> IO ()
+runChip8 run cpu =
     playIO
         (InWindow
-               "Hello World"
+                "Hello World"
                 winSize
                 (10, 10))
         (greyN 0.8)
         fps
         cpu
-        (runReaderT (displayScreen 10))
-        (\e c -> runReaderT (getKeyboardInput e) c $> c)
-        (const $ \c -> runReaderT (runEmulator ipc) c $> c)
+        (fmap fst . run (displayScreen 10))
+        (\e -> fmap snd . run (getKeyboardInput e))
+        (const $ fmap snd . run (runEmulator ipc))
 
         where fps = 60
               ipc = 500 `quot` 60

@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, FlexibleInstances #-}
+{-# LANGUAGE GADTs, FlexibleInstances, TypeFamilies #-}
 module CPU
     ( MonadEmulator(..)
     , Ref(..)
@@ -61,6 +61,10 @@ data Ref a where
     St     :: Ref Word8
 
 class Monad m => MonadEmulator m where
+    type EmState m
+
+    runIO    :: MonadIO n => m a -> EmState m -> n (a, EmState m)
+
     look     :: Ref a -> m a
     push     :: Int -> m ()
     pop      :: m Int

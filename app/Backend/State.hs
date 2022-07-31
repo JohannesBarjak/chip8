@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, GADTs #-}
-module Backend.State (initial) where
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, GADTs, TypeFamilies #-}
+module Backend.State (Cpu, initial) where
 
 import Prelude as P
 import System.Random (StdGen, Random (random))
@@ -40,6 +40,10 @@ initial rom sd = Cpu
     }
 
 instance MonadEmulator (State Cpu) where
+    type EmState (State Cpu) = Cpu
+
+    runIO s c = pure $ runState s c
+
     look (Gfx x  y) = fromMaybe False . (^?gfx.ix x.ix y) <$> get
     look I          = use i
     look (Memory x) = do
