@@ -47,7 +47,7 @@ runChip8 :: MonadEmulator m => (forall a. m a -> EmState m -> IO (a, EmState m))
 runChip8 run cpu =
     playIO
         (InWindow
-                "Hello World"
+                "Chip8"
                 winSize
                 (10, 10))
         (greyN 0.8)
