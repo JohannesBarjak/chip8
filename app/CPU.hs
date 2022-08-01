@@ -62,7 +62,7 @@ data Ref a where
     St     :: Ref Word8
 
 class Monad m => MonadEmulator m where
-    type EmState m
+    data EmState m
 
     runIO    :: MonadIO n => m a -> EmState m -> n (a, EmState m)
 

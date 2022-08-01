@@ -21,7 +21,7 @@ data Cpu = Cpu
     , seed   :: IORef StdGen
     }
 
-initial :: V.Vector Word8 -> StdGen -> IO Cpu
+initial :: V.Vector Word8 -> StdGen -> IO (EmState IOEmulator)
 initial rom sd = do
     gfx    <- blankGfx
     i      <- newIORef 0
@@ -34,17 +34,17 @@ initial rom sd = do
     st     <- newIORef 0
     seed   <- newIORef sd
 
-    pure Cpu {..}
+    pure $ IOCpu Cpu {..}
 
 newtype IOEmulator a = IOEmulator (ReaderT Cpu IO a)
     deriving (Functor, Applicative, Monad, MonadIO, MonadReader Cpu, MonadFail)
 
 instance MonadEmulator IOEmulator where
-    type EmState IOEmulator = Cpu
+    newtype EmState IOEmulator = IOCpu Cpu
 
-    runIO (IOEmulator r) c = do
+    runIO (IOEmulator r) (IOCpu c) = do
         a <- liftIO $ runReaderT r c
-        pure (a, c)
+        pure (a, IOCpu c)
 
     look ref = do
         cpu <- ask

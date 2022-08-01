@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedLists, TypeApplications, RankNTypes #-}
+{-# LANGUAGE OverloadedLists #-}
 module Main where
 
 import Emulator
@@ -36,16 +36,16 @@ main = do
 
     sd  <- initStdGen
 
-    case args !!? 2 of
+    case args !!? 1 of
         Just "io" -> do
             cpu <- B.IO.initial rom sd
-            runChip8 (runIO @IOEmulator) cpu
+            runChip8 cpu
         _ -> do
             let cpu = B.St.initial rom sd
-            runChip8 (runIO @StateEmulator) cpu
+            runChip8 cpu
 
-runChip8 :: MonadEmulator m => (forall a. m a -> EmState m -> IO (a, EmState m)) -> EmState m -> IO ()
-runChip8 run cpu =
+runChip8 :: MonadEmulator m => EmState m -> IO ()
+runChip8 cpu =
     playIO
         (InWindow
                 "Chip8"
@@ -54,9 +54,9 @@ runChip8 run cpu =
         (greyN 0.8)
         fps
         cpu
-        (fmap fst . run (displayScreen 10))
-        (\e -> fmap snd . run (getKeyboardInput e))
-        (const $ fmap snd . run (runEmulator ipc))
+        (fmap fst . runIO (displayScreen 10))
+        (\e -> fmap snd . runIO (getKeyboardInput e))
+        (const $ fmap snd . runIO (runEmulator ipc))
 
         where fps = 60
               ipc = 500 `quot` fps

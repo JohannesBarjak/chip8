@@ -25,8 +25,8 @@ data Cpu = Cpu
 
 makeLenses ''Cpu
 
-initial :: Vector Word8 -> StdGen -> Cpu
-initial rom sd = Cpu
+initial :: Vector Word8 -> StdGen -> EmState StateEmulator
+initial rom sd = StateCpu Cpu
     { _gfx    = blankScreen
     , _i      = 0
     , _memory = font <> V.replicate 0x1B0 0 <> rom <> V.replicate (0xE00 - V.length rom) 0
@@ -43,9 +43,9 @@ newtype StateEmulator a = StateEmulator (State Cpu a)
     deriving (Functor, Applicative, Monad)
 
 instance MonadEmulator StateEmulator where
-    type EmState StateEmulator = Cpu
+    newtype EmState StateEmulator = StateCpu Cpu
 
-    runIO (StateEmulator s) c = pure $ runState s c
+    runIO (StateEmulator s) (StateCpu c) = pure . fmap StateCpu $ runState s c
 
     look r = StateEmulator $ do
         cpu <- get
