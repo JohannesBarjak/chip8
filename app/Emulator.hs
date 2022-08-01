@@ -37,14 +37,14 @@ eval (SkipNotEq x (VI  y)) = skipIf =<< liftR2 (/=) (V x) (V y)
 eval (Set x (NN nn)) = V x .= nn
 eval (Set x (VI  y)) = V x =: V y
 eval (Add x (NN nn)) = V x += nn
-eval (Add x (VI y)) = do
+eval (Add x (VI  y)) = do
     (vx, vy) <- look2 (V x) (V y)
     V x += vy
     vf .= bool 0 1 (vy > (255 - vx))
 
 eval (Sub x  y) = do
     (vx, vy) <- look2 (V x) (V y)
-    V x .= vx - vy
+    V x -= vy
     vf .= bool 1 0 (vy > vx)
 eval (SubN x y) = do
     (vx, vy) <- look2 (V x) (V y)
