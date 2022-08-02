@@ -77,15 +77,15 @@ instance MonadEmulator StateEmulator where
         Dt         -> dt L.%= f
         St         -> st L.%= f
 
-    r .= f = StateEmulator $ case r of
-        (Gfx x  y) -> gfx.ix x.ix y L..= f
-        I          -> i L..= f
-        (Memory x) -> memory.ix x L..= f
-        Pc         -> pc L..= f
-        (V x)      -> v.ix x L..= f
-        (Keypad x) -> keypad.ix x L..= f
-        Dt         -> dt L..= f
-        St         -> st L..= f
+    r .= val = StateEmulator $ case r of
+        (Gfx x  y) -> gfx.ix x.ix y L..= val
+        I          -> i L..= val
+        (Memory x) -> memory.ix x L..= val
+        Pc         -> pc L..= val
+        (V x)      -> v.ix x L..= val
+        (Keypad x) -> keypad.ix x L..= val
+        Dt         -> dt L..= val
+        St         -> st L..= val
 
 blankScreen :: Vector (Vector Bool)
 blankScreen = V.replicate 64 $ V.replicate 32 False
