@@ -14,7 +14,6 @@ import Backend.IO as B.IO
 
 import Graphics.Gloss.Interface.IO.Game (playIO)
 import Data.ByteString qualified as BS
-import Relude.Extra (bimapBoth)
 
 import CPU
 
@@ -45,17 +44,24 @@ main = do
             runChip8 cpu
 
 runChip8 :: MonadEmulator m => EmState m -> IO ()
-runChip8 cpu =
+runChip8 cpu = do
+    screenSize <- newIORef winSize
+
     playIO
         (InWindow
                 "Chip8"
                 winSize
                 (10, 10))
-        (greyN 0.8)
+        white
         fps
         cpu
-        (fmap fst . runIO (displayScreen 10))
-        (\e -> fmap snd . runIO (getKeyboardInput e))
+        (\c -> do
+            screenSize' <- readIORef screenSize
+            fst <$> runIO (displayScreen screenSize') c)
+        (\e c -> do
+            (wSize, c') <- runIO (getKeyboardInput e) c
+            whenJust wSize $ writeIORef screenSize
+            pure c')
         (const $ fmap snd . runIO (runEmulator ipc))
 
         where fps = 60
@@ -68,11 +74,14 @@ getRom filename = do
         then Just rom
         else Nothing
 
-getKeyboardInput :: MonadEmulator m => Event -> m ()
+getKeyboardInput :: MonadEmulator m => Event -> m (Maybe (Int, Int))
 getKeyboardInput (EventKey (Char k) pressed _ _) = setKey (pressed /= Up)
-    where setKey b = whenJust (lookup k keyMap) $ \x -> Keypad x .= b
+    where setKey b = do
+            whenJust (lookup k keyMap) $ \x -> Keypad x .= b
+            pure Nothing
+getKeyboardInput (EventResize wSize) = pure $ Just wSize
 
-getKeyboardInput _ = pure ()
+getKeyboardInput _ = pure Nothing
 
 keyMap :: Map Char Int
 keyMap =
@@ -92,17 +101,20 @@ keyMap =
     , ('v', 0xF), ('V', 0xF)
     ]
 
-displayScreen :: MonadEmulator m => Int -> m Picture
-displayScreen sc = fmap pictures . sequence $ do
+displayScreen :: MonadEmulator m => (Int, Int) -> m Picture
+displayScreen (width, height) = fmap pictures . sequence $ do
     x <- [0..63]
-    let xPos = x * sc - (winWidth `div` 2)
+    let xPos = fromIntegral x * size - (fromIntegral width / 2)
     y <- [0..31]
-    let yPos = (y + 1) * (-sc) + (winHeight `div` 2)
+    let yPos = fromIntegral (y + 1) * (-size) + (fromIntegral height / 2)
 
-    pure $ pixelImage xPos yPos sc <$> look (Gfx x y)
+    pure $ pixelImage xPos yPos size <$> look (Gfx x y)
+    where size = pixelSize (fromIntegral width) (fromIntegral height)
 
-pixelImage :: Int -> Int -> Int -> Bool -> Picture
+pixelSize :: (Ord a, Fractional a) => a -> a -> a
+pixelSize width height = min (width / 64) (height / 32)
+
+pixelImage :: Float -> Float -> Float -> Bool -> Picture
 pixelImage x y s p = Color (pixelColor p) square
     where pixelColor = bool black white
-          square = Polygon $ map (bimapBoth fromIntegral)
-            [(x, y), (x, y + s), (x + s, y + s), (x + s, y)]
+          square = Polygon [(x, y), (x, y + s), (x + s, y + s), (x + s, y)]
