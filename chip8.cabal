@@ -35,7 +35,7 @@ executable chip8
                    , random^>=1.2.1
                    , lens  ^>=5.1
                    , vector^>=0.12.3.1
-    ghc-options: -Wall -O2 -fllvm -fspecialize-aggressively -fexpose-all-unfoldings
+    ghc-options: -Wall -O2 -fspecialize-aggressively -fexpose-all-unfoldings
     hs-source-dirs:   app
     mixins: base hiding (Prelude)
           , relude (Relude as Prelude)
