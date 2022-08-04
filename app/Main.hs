@@ -75,10 +75,9 @@ getRom filename = do
         else Nothing
 
 getKeyboardInput :: MonadEmulator m => Event -> m (Maybe (Int, Int))
-getKeyboardInput (EventKey (Char k) pressed _ _) = setKey (pressed /= Up)
-    where setKey b = do
-            whenJust (lookup k keyMap) $ \x -> Keypad x .= b
-            pure Nothing
+getKeyboardInput (EventKey (Char k) pressed _ _) = do
+    whenJust (lookup k keyMap) $ \x -> Keypad x .= (pressed /= Up)
+    pure Nothing
 getKeyboardInput (EventResize wSize) = pure $ Just wSize
 
 getKeyboardInput _ = pure Nothing
