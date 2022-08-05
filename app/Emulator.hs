@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Emulator (runEmulator) where
+module Emulator (emulatorCycle) where
 
 import CPU
 
@@ -8,13 +8,13 @@ import Relude.Extra (bimapBoth)
 import Data.List (elemIndex)
 import Data.Traversable (for)
 
-runEmulator :: MonadEmulator m => Int -> m ()
-runEmulator ipc = do
+emulatorCycle :: MonadEmulator m => Int -> m ()
+emulatorCycle ipc = do
     traverse_ (liftA2 whenM (fmap (> 0) . look) (-= 1)) [Dt, St]
-    replicateM_ ipc emulatorCycle
+    replicateM_ ipc runInstruction
 
-emulatorCycle :: MonadEmulator m => m ()
-emulatorCycle = do
+runInstruction :: MonadEmulator m => m ()
+runInstruction = do
     curPc <- look Pc
     incPc
     

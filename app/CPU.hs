@@ -62,9 +62,9 @@ data Ref a where
     St     :: Ref Word8
 
 class Monad m => MonadEmulator m where
-    data EmState m
+    data CpuState m
 
-    runIO    :: MonadIO n => m a -> EmState m -> n (a, EmState m)
+    runIO    :: MonadIO n => m a -> CpuState m -> n (a, CpuState m)
 
     look     :: Ref a -> m a
     push     :: Int -> m ()

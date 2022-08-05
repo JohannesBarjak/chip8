@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, GADTs, TypeFamilies, GeneralisedNewtypeDeriving #-}
-module Backend.State (Cpu, StateEmulator, initial) where
+module Backend.State (StateEmulator, initial) where
 
 import Prelude as P
 import System.Random (StdGen, Random (random))
@@ -25,7 +25,7 @@ data Cpu = Cpu
 
 makeLenses ''Cpu
 
-initial :: Vector Word8 -> StdGen -> EmState StateEmulator
+initial :: Vector Word8 -> StdGen -> CpuState StateEmulator
 initial rom sd = StateCpu Cpu
     { _gfx    = blankScreen
     , _i      = 0
@@ -43,7 +43,7 @@ newtype StateEmulator a = StateEmulator (State Cpu a)
     deriving (Functor, Applicative, Monad)
 
 instance MonadEmulator StateEmulator where
-    newtype EmState StateEmulator = StateCpu Cpu
+    newtype CpuState StateEmulator = StateCpu Cpu
 
     runIO (StateEmulator s) (StateCpu c) = pure . fmap StateCpu $ runState s c
 

@@ -17,6 +17,8 @@ import Data.ByteString qualified as BS
 
 import CPU
 
+data Emulator m = Emulator (CpuState m) (Int, Int)
+
 winWidth, winHeight :: Int
 winWidth  = 640
 winHeight = 320
@@ -43,30 +45,6 @@ main = do
             let cpu = B.St.initial rom sd
             runChip8 cpu
 
-runChip8 :: MonadEmulator m => EmState m -> IO ()
-runChip8 cpu = do
-    screenSize <- newIORef winSize
-
-    playIO
-        (InWindow
-                "Chip8"
-                winSize
-                (10, 10))
-        white
-        fps
-        cpu
-        (\c -> do
-            screenSize' <- readIORef screenSize
-            fst <$> runIO (displayScreen screenSize') c)
-        (\e c -> do
-            (wSize, c') <- runIO (getKeyboardInput e) c
-            whenJust wSize $ writeIORef screenSize
-            pure c')
-        (const $ fmap snd . runIO (runEmulator ipc))
-
-        where fps = 60
-              ipc = 500 `quot` fps
-
 getRom :: MonadIO m => FilePath -> m (Maybe ByteString)
 getRom filename = do
     rom <- readFileBS filename
@@ -74,13 +52,43 @@ getRom filename = do
         then Just rom
         else Nothing
 
-getKeyboardInput :: MonadEmulator m => Event -> m (Maybe (Int, Int))
-getKeyboardInput (EventKey (Char k) pressed _ _) = do
+runChip8 :: MonadEmulator m => CpuState m -> IO ()
+runChip8 cpu =
+    playIO
+        (InWindow
+                "Chip8"
+                winSize
+                (10, 10))
+        white
+        fps
+        (Emulator cpu winSize)
+        draw
+        eventHandler
+        (runCycle ipc)
+
+        where fps = 60
+              ipc = 500 `quot` fps
+
+runCycle :: (MonadEmulator m, MonadIO n) => Int -> p -> Emulator m -> n (Emulator m)
+runCycle ipc _ (Emulator cpu wSize) = do
+    (_, cpu') <- runIO (emulatorCycle ipc) cpu
+    pure (Emulator cpu' wSize)
+
+draw :: (MonadEmulator m, MonadIO n) => Emulator m -> n Picture
+draw (Emulator cpu wSize) = fst <$> runIO (displayScreen wSize) cpu
+
+eventHandler :: (MonadEmulator m, MonadIO n) => Event -> Emulator m -> n (Emulator m)
+eventHandler e (Emulator cpu wSize) = do
+    (mSize, cpu') <- runIO (eventHandler' e) cpu
+    pure $ Emulator cpu' (fromMaybe wSize mSize)
+
+eventHandler' :: MonadEmulator m => Event -> m (Maybe (Int, Int))
+eventHandler' (EventKey (Char k) pressed _ _) = do
     whenJust (lookup k keyMap) $ \x -> Keypad x .= (pressed /= Up)
     pure Nothing
-getKeyboardInput (EventResize wSize) = pure $ Just wSize
+eventHandler' (EventResize wSize) = pure $ Just wSize
 
-getKeyboardInput _ = pure Nothing
+eventHandler' _ = pure Nothing
 
 keyMap :: Map Char Int
 keyMap =

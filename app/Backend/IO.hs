@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs, FlexibleInstances, RecordWildCards, TypeFamilies, GeneralisedNewtypeDeriving #-}
-module Backend.IO (Cpu, IOEmulator, initial) where
+module Backend.IO (IOEmulator, initial) where
 
 import CPU
 import System.Random (StdGen, random)
@@ -21,7 +21,7 @@ data Cpu = Cpu
     , seed   :: IORef StdGen
     }
 
-initial :: V.Vector Word8 -> StdGen -> IO (EmState IOEmulator)
+initial :: V.Vector Word8 -> StdGen -> IO (CpuState IOEmulator)
 initial rom sd = do
     gfx    <- blankGfx
     i      <- newIORef 0
@@ -40,7 +40,7 @@ newtype IOEmulator a = IOEmulator (ReaderT Cpu IO a)
     deriving (Functor, Applicative, Monad, MonadIO, MonadReader Cpu, MonadFail)
 
 instance MonadEmulator IOEmulator where
-    newtype EmState IOEmulator = IOCpu Cpu
+    newtype CpuState IOEmulator = IOCpu Cpu
 
     runIO (IOEmulator r) (IOCpu c) = do
         a <- liftIO $ runReaderT r c
