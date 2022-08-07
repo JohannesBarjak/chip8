@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedLists, RecordWildCards #-}
 module Main where
 
 import Emulator
@@ -12,12 +12,16 @@ import Data.Map.Strict (lookup)
 import Backend.State as B.St
 import Backend.IO as B.IO
 
-import Graphics.Gloss.Interface.IO.Game (playIO)
+import Graphics.Gloss.Interface.IO.Game as G (playIO, KeyState(..))
 import Data.ByteString qualified as BS
 
 import CPU
 
-data Emulator m = Emulator (CpuState m) (Int, Int)
+data Emulator m = Emulator
+    { cpu    :: CpuState m
+    , wSize  :: (Int, Int)
+    , paused :: Bool
+    }
 
 winWidth, winHeight :: Int
 winWidth  = 640
@@ -61,7 +65,7 @@ runChip8 cpu =
                 (10, 10))
         white
         fps
-        (Emulator cpu winSize)
+        (Emulator cpu winSize False)
         draw
         eventHandler
         (const $ runCycle ipc)
@@ -70,25 +74,28 @@ runChip8 cpu =
               ipc = 500 `quot` fps
 
 runCycle :: (MonadEmulator m, MonadIO n) => Int -> Emulator m -> n (Emulator m)
-runCycle ipc (Emulator cpu wSize) = do
+runCycle ipc (Emulator cpu wSize False) = do
     (_, cpu') <- runIO (emulatorCycle ipc) cpu
-    pure (Emulator cpu' wSize)
+    pure (Emulator cpu' wSize False)
+runCycle _ e = pure e
 
 draw :: (MonadEmulator m, MonadIO n) => Emulator m -> n Picture
-draw (Emulator cpu wSize) = fst <$> runIO (displayScreen wSize) cpu
+draw (Emulator cpu wSize _) = fst <$> runIO (displayScreen wSize) cpu
 
 eventHandler :: (MonadEmulator m, MonadIO n) => Event -> Emulator m -> n (Emulator m)
-eventHandler e (Emulator cpu wSize) = do
-    (mSize, cpu') <- runIO (eventHandler' e) cpu
-    pure $ Emulator cpu' (fromMaybe wSize mSize)
+eventHandler e em@(Emulator cpu _ _) = do
+    (Emulator _ wSize' p, cpu') <- runIO (eventHandler' e em) cpu
+    pure $ Emulator cpu' wSize' p
 
-eventHandler' :: MonadEmulator m => Event -> m (Maybe (Int, Int))
-eventHandler' (EventKey (Char k) pressed _ _) = do
+eventHandler' :: MonadEmulator m => Event -> Emulator m -> m (Emulator m)
+eventHandler' (EventKey (Char 'p') G.Down _ _) em@(Emulator {..}) =
+    pure $ em { paused = not paused }
+eventHandler' (EventKey (Char k) pressed _ _) e = do
     whenJust (lookup k keyMap) $ \x -> Keypad x .= (pressed /= Up)
-    pure Nothing
-eventHandler' (EventResize wSize) = pure $ Just wSize
+    pure e
+eventHandler' (EventResize wSize) (Emulator cpu _ p) = pure $ Emulator cpu wSize p
 
-eventHandler' _ = pure Nothing
+eventHandler' _ e = pure e
 
 keyMap :: Map Char Int
 keyMap =
