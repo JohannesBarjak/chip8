@@ -64,13 +64,13 @@ runChip8 cpu =
         (Emulator cpu winSize)
         draw
         eventHandler
-        (runCycle ipc)
+        (const $ runCycle ipc)
 
         where fps = 60
               ipc = 500 `quot` fps
 
-runCycle :: (MonadEmulator m, MonadIO n) => Int -> p -> Emulator m -> n (Emulator m)
-runCycle ipc _ (Emulator cpu wSize) = do
+runCycle :: (MonadEmulator m, MonadIO n) => Int -> Emulator m -> n (Emulator m)
+runCycle ipc (Emulator cpu wSize) = do
     (_, cpu') <- runIO (emulatorCycle ipc) cpu
     pure (Emulator cpu' wSize)
 
