@@ -50,7 +50,7 @@ instance MonadEmulator StateEmulator where
     look r = StateEmulator $ do
         cpu <- get
         case r of
-            (Gfx x  y) -> fromMaybe False . (^?gfx.ix x.ix y) <$> get
+            (Gfx x  y) -> fromMaybe False . (^?gfxWrapping x y) <$> get
             I          -> use i
             (Memory x) -> pure (cpu^?!memory.ix x)
             Pc         -> use pc
@@ -68,7 +68,7 @@ instance MonadEmulator StateEmulator where
     clearGfx = StateEmulator $ gfx L..= blankScreen
 
     r %= f = StateEmulator $ case r of
-        (Gfx x  y) -> gfx.ix x.ix y L.%= f
+        (Gfx x  y) -> gfxWrapping x y L.%= f
         I          -> i L.%= f
         (Memory x) -> memory.ix x L.%= f
         Pc         -> pc L.%= f
@@ -78,7 +78,7 @@ instance MonadEmulator StateEmulator where
         St         -> st L.%= f
 
     r .= val = StateEmulator $ case r of
-        (Gfx x  y) -> gfx.ix x.ix y L..= val
+        (Gfx x  y) -> gfxWrapping x y L..= val
         I          -> i L..= val
         (Memory x) -> memory.ix x L..= val
         Pc         -> pc L..= val
@@ -86,6 +86,9 @@ instance MonadEmulator StateEmulator where
         (Keypad x) -> keypad.ix x L..= val
         Dt         -> dt L..= val
         St         -> st L..= val
+
+gfxWrapping :: Applicative f => Int -> Int -> (Bool -> f Bool) -> Cpu -> f Cpu
+gfxWrapping x y = gfx.ix (x `rem` 64).ix (y `rem` 32)
 
 blankScreen :: Vector (Vector Bool)
 blankScreen = V.replicate 64 $ V.replicate 32 False
