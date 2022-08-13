@@ -63,7 +63,7 @@ runChip8 cpu =
                 "Chip8"
                 winSize
                 (10, 10))
-        white
+        black
         fps
         (Emulator cpu winSize False)
         draw
@@ -134,5 +134,5 @@ pixelSize width height = min (width / 64) (height / 32)
 
 pixelImage :: Float -> Float -> Float -> Bool -> Picture
 pixelImage x y s p = Color (pixelColor p) square
-    where pixelColor = bool black white
+    where pixelColor = bool (greyN 0.1) (greyN 0.9)
           square = Polygon [(x, y), (x, y + s), (x + s, y + s), (x + s, y)]
