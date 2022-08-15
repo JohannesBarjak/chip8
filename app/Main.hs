@@ -14,6 +14,7 @@ import Backend.IO as B.IO
 
 import Graphics.Gloss.Interface.IO.Game as G (playIO, KeyState(..))
 import Data.ByteString qualified as BS
+import Data.Char (toUpper)
 
 import CPU
 
@@ -88,10 +89,10 @@ eventHandler e em@(Emulator cpu _ _) = do
     pure $ Emulator cpu' wSize' p
 
 eventHandler' :: MonadEmulator m => Event -> Emulator m -> m (Emulator m)
-eventHandler' (EventKey (Char 'p') G.Down _ _) em@(Emulator {..}) =
-    pure $ em { paused = not paused }
+eventHandler' (EventKey (Char k) G.Down _ _) em@(Emulator {..})
+    | toUpper k == 'P' = pure $ em { paused = not paused }
 eventHandler' (EventKey (Char k) pressed _ _) e = do
-    whenJust (lookup k keyMap) $ \x -> Keypad x .= (pressed /= Up)
+    whenJust (lookup (toUpper k) keyMap) $ \x -> Keypad x .= (pressed /= Up)
     pure e
 eventHandler' (EventResize wSize) (Emulator cpu _ p) = pure $ Emulator cpu wSize p
 
@@ -101,18 +102,12 @@ keyMap :: Map Char Int
 keyMap =
     [ ('1', 0x1), ('2', 0x2)
     , ('3', 0x3), ('4', 0xC)
-    , ('q', 0x4), ('Q', 0x4)
-    , ('w', 0x5), ('W', 0x5)
-    , ('e', 0x6), ('E', 0x6)
-    , ('r', 0xD), ('R', 0xD)
-    , ('a', 0x7), ('A', 0x7)
-    , ('s', 0x8), ('S', 0x8)
-    , ('d', 0x9), ('D', 0x9)
-    , ('f', 0xE), ('F', 0xE)
-    , ('z', 0xA), ('Z', 0xA)
-    , ('x', 0x0), ('X', 0x0)
-    , ('c', 0xB), ('C', 0xB)
-    , ('v', 0xF), ('V', 0xF)
+    , ('Q', 0x4), ('W', 0x5)
+    , ('E', 0x6), ('R', 0xD)
+    , ('A', 0x7), ('S', 0x8)
+    , ('D', 0x9), ('F', 0xE)
+    , ('Z', 0xA), ('X', 0x0)
+    , ('C', 0xB), ('V', 0xF)
     ]
 
 displayScreen :: MonadEmulator m => (Int, Int) -> m Picture
