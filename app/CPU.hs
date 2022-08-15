@@ -6,7 +6,6 @@ module CPU
     , Source(..)
     , (<~), (=:), (+=), (-=)
     , toInstruction
-    , toNib
     ) where
 
 import Data.Bits
@@ -14,8 +13,6 @@ import Numeric (showHex)
 
 import Prelude as P
 import Relude.Extra (bimapBoth)
-
-type Nibbles = (Word8, Word8)
 
 data Instruction
     = ClearScreen
@@ -90,49 +87,59 @@ ref += val = ref %= (+val)
 (-=) :: (MonadEmulator m, Num a) => Ref a -> a -> m ()
 ref -= val = ref %= subtract val
 
-toInstruction :: Nibbles -> Nibbles -> Instruction
-toInstruction (0x0, 0x0) (0xE, 0x0) = ClearScreen
-toInstruction (0x0, 0x0) (0xE, 0xE) = Return
-toInstruction (0x1,   n) nn         = Jmp  (toAddress n nn)
-toInstruction (0x2,   n) nn         = Call (toAddress n nn)
-toInstruction (0x3,   x) nn         = SkipEq    (fromIntegral x) (NN $ fromNib nn)
-toInstruction (0x4,   x) nn         = SkipNotEq (fromIntegral x) (NN $ fromNib nn)
-toInstruction (0x5,   x) (y,   0x0) = SkipEq    (fromIntegral x) (VI $ fromIntegral y)
-toInstruction (0x6,   x) nn         = Set (fromIntegral x) (NN $ fromNib nn)
-toInstruction (0x7,   x) nn         = Add (fromIntegral x) (NN $ fromNib nn)
-toInstruction (0x8,   x) (y,   0x0) = Set (fromIntegral x) (VI $ fromIntegral y)
-toInstruction (0x8,   x) (y,   0x1) = Or  (fromIntegral x) (fromIntegral y)
-toInstruction (0x8,   x) (y,   0x2) = And (fromIntegral x) (fromIntegral y)
-toInstruction (0x8,   x) (y,   0x3) = Xor (fromIntegral x) (fromIntegral y)
-toInstruction (0x8,   x) (y,   0x4) = Add (fromIntegral x) (VI $ fromIntegral y)
-toInstruction (0x8,   x) (y,   0x5) = Sub (fromIntegral x) (fromIntegral y)
-toInstruction (0x8,   x) (y,   0x6) = ShiftRight (fromIntegral x) (fromIntegral y)
-toInstruction (0x8,   x) (y,   0x7) = SubN (fromIntegral x) (fromIntegral y)
-toInstruction (0x8,   x) (y,   0xE) = ShiftLeft  (fromIntegral x) (fromIntegral y)
-toInstruction (0x9,   x) (y,   0x0) = SkipNotEq  (fromIntegral x) (VI $ fromIntegral y)
-toInstruction (0xA,   n) nn         = Index (toAddress n nn)
-toInstruction (0xB,   x) nn         = JmpOff (fromIntegral x) (toAddress x nn)
-toInstruction (0xC,   x) nn         = Rand  (fromIntegral x) (fromNib nn)
-toInstruction (0xD,   x) (y,     n) = Draw  (fromIntegral x) (fromIntegral y) (fromIntegral n)
-toInstruction (0xE,   x) (0x9, 0xE) = SkipKey     (fromIntegral x)
-toInstruction (0xE,   x) (0xA, 0x1) = SkipNotKey  (fromIntegral x)
-toInstruction (0xF,   x) (0x0, 0x7) = GetDelay    (fromIntegral x)
-toInstruction (0xF,   x) (0x1, 0x5) = SetDelay    (fromIntegral x)
-toInstruction (0xF,   x) (0x1, 0x8) = Sound       (fromIntegral x)
-toInstruction (0xF,   x) (0x1, 0xE) = AddIndex    (fromIntegral x)
-toInstruction (0xF,   x) (0x2, 0x9) = Font        (fromIntegral x)
-toInstruction (0xF,   x) (0x0, 0xA) = GetKey      (fromIntegral x)
-toInstruction (0xF,   x) (0x3, 0x3) = BCDConv     (fromIntegral x)
-toInstruction (0xF,   x) (0x5, 0x5) = WriteMemory (fromIntegral x)
-toInstruction (0xF,   x) (0x6, 0x5) = ReadMemory  (fromIntegral x)
-toInstruction (n0,   n1) (n2,   n3) = error $ "CPU: unsupported instruction: " <> byte
-    where byte = foldMap (toText . flip showHex "") [n0, n1, n2, n3]
+toInstruction :: Word8 -> Word8 -> Instruction
+toInstruction b0 b1 = toInstruction'' byte
+    where byte = (fromIntegral b0 `shiftL` 8) .|. fromIntegral b1
 
-toAddress :: Word8 -> Nibbles -> Int
-toAddress n nn = (fromIntegral n `shiftL` 8) .|. fromIntegral (fromNib nn)
-
-toNib :: Word8 -> Nibbles
-toNib w = bimapBoth (.&. 0xF) (w `shiftR` 4, w)
-
-fromNib :: Nibbles -> Word8
-fromNib (h, l) = (fromIntegral h `shiftL` 4) .|. fromIntegral l
+toInstruction'' :: Int -> Instruction
+toInstruction'' byte = case upper of
+        0x0 -> case (x,y,lower) of
+            (0x0, 0xE, 0x0) -> ClearScreen
+            (0x0, 0xE, 0xE) -> Return
+            _ -> invalidInstruction
+        0x1 -> Jmp  nnn
+        0x2 -> Call nnn
+        0x3 -> SkipEq    x (NN nn)
+        0x4 -> SkipNotEq x (NN nn)
+        0x5 -> SkipEq    x (VI  y)
+        0x6 -> Set x (NN nn)
+        0x7 -> Add x (NN nn)
+        0x8 -> case lower of
+            0x0 -> Set x (VI y)
+            0x1 -> Or  x y
+            0x2 -> And x y
+            0x3 -> Xor x y
+            0x4 -> Add x (VI y)
+            0x5 -> Sub x y
+            0x6 -> ShiftRight x y
+            0x7 -> SubN x y
+            0xE -> ShiftLeft x y
+            _ -> invalidInstruction
+        0x9 | lower == 0 -> SkipNotEq x (VI y)
+        0xA -> Index    nnn
+        0xB -> JmpOff x nnn
+        0xC -> Rand x nn
+        0xD -> Draw x y lower
+        0xE -> case (y,lower) of
+            (0x9, 0xE) -> SkipKey    x
+            (0xA, 0x1) -> SkipNotKey x
+            _ -> invalidInstruction
+        0xF -> case (y,lower) of
+            (0x0, 0x7) -> GetDelay x
+            (0x1, 0x5) -> SetDelay x
+            (0x1, 0x8) -> Sound    x
+            (0x1, 0xE) -> AddIndex x
+            (0x2, 0x9) -> Font     x
+            (0x0, 0xA) -> GetKey   x
+            (0x3, 0x3) -> BCDConv  x
+            (0x5, 0x5) -> WriteMemory x
+            (0x6, 0x5) -> ReadMemory  x
+            _ -> invalidInstruction
+        _ -> invalidInstruction
+    where nnn   = byte .&. 0x0FFF
+          nn    = fromIntegral $ byte .&. 0xFF
+          (x,y) = bimapBoth (.&. 0xF) (byte `shiftR` 8, byte `shiftR` 4)
+          upper = byte `shiftR` 12
+          lower = byte .&. 0xF
+          invalidInstruction = error $ "CPU: unsupported instruction: " <> invalid
+          invalid = foldMap (toText . flip showHex "") [upper,x,y,lower]

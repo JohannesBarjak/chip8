@@ -19,7 +19,7 @@ runInstruction = do
     incPc
     
     (b0, b1) <- look2 (Memory curPc) (Memory $ curPc + 1)
-    eval $ toInstruction (toNib b0) (toNib b1)
+    eval $ toInstruction b0 b1
 
 eval :: MonadEmulator m => Instruction -> m ()
 eval ClearScreen = clearGfx
