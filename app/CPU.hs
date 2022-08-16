@@ -88,11 +88,11 @@ ref += val = ref %= (+val)
 ref -= val = ref %= subtract val
 
 toInstruction :: Word8 -> Word8 -> Instruction
-toInstruction b0 b1 = toInstruction'' byte
+toInstruction b0 b1 = toInstruction' byte
     where byte = (fromIntegral b0 `shiftL` 8) .|. fromIntegral b1
 
-toInstruction'' :: Int -> Instruction
-toInstruction'' byte = case upper of
+toInstruction' :: Int -> Instruction
+toInstruction' byte = case upper of
         0x0 -> case (x,y,lower) of
             (0x0, 0xE, 0x0) -> ClearScreen
             (0x0, 0xE, 0xE) -> Return
