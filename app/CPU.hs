@@ -4,6 +4,7 @@ module CPU
     , Ref(..)
     , Instruction(..)
     , Source(..)
+    , Mode(..)
     , (<~), (=:), (+=), (-=)
     , toInstruction
     ) where
@@ -27,13 +28,13 @@ data Instruction
     | Sub Int Int
     | SubN Int Int
     | Add Int Source
-    | ShiftRight Int Int
-    | ShiftLeft Int Int
+    | ShiftRight Int (Maybe Int)
+    | ShiftLeft Int (Maybe Int)
     | Or Int Int
     | And Int Int
     | Xor Int Int
     | Index Int
-    | JmpOff Int Int
+    | JmpOff (Maybe Int) Int
     | Rand Int Word8
     | Draw Int Int Int
     | GetDelay Int
@@ -43,10 +44,11 @@ data Instruction
     | Font Int
     | GetKey Int
     | BCDConv Int
-    | WriteMemory Int
-    | ReadMemory Int
+    | WriteMemory Int Mode
+    | ReadMemory Int Mode
 
 data Source = VI Int | NN Word8
+data Mode   = Chip48 | CosmicVip deriving Eq
 
 data Ref a where
     Gfx    :: Int -> Int -> Ref Bool
@@ -87,12 +89,12 @@ ref += val = ref %= (+val)
 (-=) :: (MonadEmulator m, Num a) => Ref a -> a -> m ()
 ref -= val = ref %= subtract val
 
-toInstruction :: Word8 -> Word8 -> Instruction
+toInstruction :: Word8 -> Word8 -> Mode -> Instruction
 toInstruction b0 b1 = toInstruction' byte
     where byte = (fromIntegral b0 `shiftL` 8) .|. fromIntegral b1
 
-toInstruction' :: Int -> Instruction
-toInstruction' byte = case upper of
+toInstruction' :: Int -> Mode -> Instruction
+toInstruction' byte mode = case upper of
         0x0 -> case (x,y,lower) of
             (0x0, 0xE, 0x0) -> ClearScreen
             (0x0, 0xE, 0xE) -> Return
@@ -111,13 +113,19 @@ toInstruction' byte = case upper of
             0x3 -> Xor x y
             0x4 -> Add x (VI y)
             0x5 -> Sub x y
-            0x6 -> ShiftRight x y
+            0x6 -> case mode of
+                Chip48    -> ShiftRight x Nothing
+                CosmicVip -> ShiftRight x (Just y)
             0x7 -> SubN x y
-            0xE -> ShiftLeft x y
+            0xE -> case mode of
+                Chip48    -> ShiftLeft x Nothing
+                CosmicVip -> ShiftLeft x (Just y)
             _ -> invalidInstruction
         0x9 | lower == 0 -> SkipNotEq x (VI y)
         0xA -> Index    nnn
-        0xB -> JmpOff x nnn
+        0xB -> case mode of
+            Chip48    -> JmpOff (Just x) nnn
+            CosmicVip -> JmpOff Nothing  nnn
         0xC -> Rand x nn
         0xD -> Draw x y lower
         0xE -> case (y,lower) of
@@ -132,8 +140,8 @@ toInstruction' byte = case upper of
             (0x2, 0x9) -> Font     x
             (0x0, 0xA) -> GetKey   x
             (0x3, 0x3) -> BCDConv  x
-            (0x5, 0x5) -> WriteMemory x
-            (0x6, 0x5) -> ReadMemory  x
+            (0x5, 0x5) -> WriteMemory x mode
+            (0x6, 0x5) -> ReadMemory  x mode
             _ -> invalidInstruction
         _ -> invalidInstruction
     where nnn   = byte .&. 0x0FFF

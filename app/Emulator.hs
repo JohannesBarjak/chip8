@@ -8,18 +8,18 @@ import Relude.Extra (bimapBoth)
 import Data.List (elemIndex)
 import Data.Traversable (for)
 
-emulatorCycle :: MonadEmulator m => Int -> m ()
-emulatorCycle ipc = do
+emulatorCycle :: MonadEmulator m => Int -> Mode -> m ()
+emulatorCycle ipc mode = do
     traverse_ (liftA2 whenM (fmap (> 0) . look) (-= 1)) [Dt, St]
-    replicateM_ ipc runInstruction
+    replicateM_ ipc (runInstruction mode)
 
-runInstruction :: MonadEmulator m => m ()
-runInstruction = do
+runInstruction :: MonadEmulator m => Mode -> m ()
+runInstruction mode = do
     curPc <- look Pc
     incPc
     
     (b0, b1) <- look2 (Memory curPc) (Memory $ curPc + 1)
-    eval $ toInstruction b0 b1
+    eval $ toInstruction b0 b1 mode
 
 eval :: MonadEmulator m => Instruction -> m ()
 eval ClearScreen = clearGfx
@@ -51,11 +51,15 @@ eval (SubN x y) = do
     V x .= vy - vx
     vf .= bool 1 0 (vx > vy)
 
-eval (ShiftRight x _) = do
+eval (ShiftRight x my) = do
+    whenJust my $ \y -> V x =: V y
+
     vx <- look (V x)
     V x .= vx `shiftR` 1
     vf .= vx .&. 1
-eval (ShiftLeft  x _) = do
+eval (ShiftLeft  x my) = do
+    whenJust my $ \y -> V x =: V y
+
     vx <- look (V x)
     V x .= vx `shiftL` 1
     vf .= vx `shiftR` 7
@@ -65,8 +69,8 @@ eval (And x y) = V x <~ liftR2 (.&.) (V x) (V y)
 eval (Xor x y) = V x <~ liftR2  xor  (V x) (V y)
 
 eval (Index addr) = I .= addr
-eval (JmpOff _ addr) = do
-    vx <- look (V 0)
+eval (JmpOff mx addr) = do
+    vx <- look . V $ fromMaybe 0 mx
     jmp (addr + fromIntegral vx)
 eval (Rand  x nn) = V x <~ fmap (.&. nn) rand
 
@@ -120,12 +124,16 @@ eval (BCDConv x) = do
 
     where calcDigit vx n = (vx `quot` (100 `quot` 10^n)) `rem` 10
 
-eval (WriteMemory x) = do
+eval (WriteMemory x m) = do
     idx <- look I
     traverse_ ((=:) . Memory . (+ idx) <*> V) [0..x]
-eval (ReadMemory  x) = do
+    when (m == CosmicVip) $ do
+        I .= (idx + x + 1)
+eval (ReadMemory  x m) = do
     idx <- look I
     traverse_ ((=:) . V <*> Memory . (+ idx)) [0..x]
+    when (m == CosmicVip) $ do
+        I .= (idx + x + 1)
 
 liftR2 :: MonadEmulator m => (a -> b -> c) -> Ref a -> Ref b -> m c
 liftR2 f r1 r2 = uncurry f <$> look2 r1 r2

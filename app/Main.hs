@@ -42,13 +42,15 @@ main = do
 
     sd  <- initStdGen
 
-    case args !!? 1 of
-        Just "io" -> do
+    let mode = bool Chip48 CosmicVip ("cosmic" `elem` args)
+
+    if "io" `elem` args then
+        do
             cpu <- B.IO.initial rom sd
-            runChip8 cpu
-        _ -> do
+            runChip8 cpu mode
+        else do
             let cpu = B.St.initial rom sd
-            runChip8 cpu
+            runChip8 cpu mode
 
 getRom :: MonadIO m => FilePath -> m (Maybe ByteString)
 getRom filename = do
@@ -57,8 +59,8 @@ getRom filename = do
         then Just rom
         else Nothing
 
-runChip8 :: MonadEmulator m => CpuState m -> IO ()
-runChip8 cpu =
+runChip8 :: MonadEmulator m => CpuState m -> Mode -> IO ()
+runChip8 cpu mode =
     playIO
         (InWindow
                 "Chip8"
@@ -69,16 +71,16 @@ runChip8 cpu =
         (Emulator cpu winSize False)
         draw
         eventHandler
-        (const $ runCycle ipc)
+        (const $ runCycle ipc mode)
 
         where fps = 60
               ipc = 500 `quot` fps
 
-runCycle :: (MonadEmulator m, MonadIO n) => Int -> Emulator m -> n (Emulator m)
-runCycle ipc (Emulator cpu wSize False) = do
-    (_, cpu') <- runIO (emulatorCycle ipc) cpu
+runCycle :: (MonadEmulator m, MonadIO n) => Int -> Mode -> Emulator m -> n (Emulator m)
+runCycle ipc mode (Emulator cpu wSize False) = do
+    (_, cpu') <- runIO (emulatorCycle ipc mode) cpu
     pure (Emulator cpu' wSize False)
-runCycle _ e = pure e
+runCycle _ _ e = pure e
 
 draw :: (MonadEmulator m, MonadIO n) => Emulator m -> n Picture
 draw (Emulator cpu wSize _) = fst <$> runIO (displayScreen wSize) cpu
