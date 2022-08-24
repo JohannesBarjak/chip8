@@ -78,33 +78,29 @@ instance MonadEmulator IOEmulator where
         gfx' <- gfx <$> ask
         liftIO $ M.copy gfx' =<< blankGfx
 
-    r %= f = ask >>= \Cpu{..} -> case r of
-        (Gfx x  y) -> liftIO $ M.modify gfx f (indexGfx x y)
+    r %= f = ask >>= \Cpu{..} -> liftIO $ case r of
+        (Gfx x  y) -> M.modify gfx f (indexGfx x y)
         I          -> modifyIORef i f
-        (Memory x) -> liftIO $ M.modify memory f x
+        (Memory x) -> M.modify memory f x
 
         Pc         -> modifyIORef pc f
-        (V x)      -> liftIO $ M.modify v f x
-        (Keypad x) -> liftIO $ M.modify keypad f x
+        (V x)      -> M.modify v f x
+        (Keypad x) -> M.modify keypad f x
 
         Dt         -> modifyIORef dt f
         St         -> modifyIORef st f
 
-    (Gfx x y) .= p = writeCpuMemory gfx p (indexGfx x y)
-    I .= a = flip writeIORef a . i =<< ask
-    (Memory x) .= b = writeCpuMemory memory b x
+    r .= val = ask >>= \Cpu{..} -> liftIO $ case r of
+        (Gfx x  y) -> M.write gfx (indexGfx x y) val
+        I          -> writeIORef i val
+        (Memory x) -> M.write memory x val
 
-    Pc .= a = flip writeIORef a . pc =<< ask
-    (V x) .= b = writeCpuMemory v b x
-    (Keypad x) .= k = writeCpuMemory keypad k x
+        Pc         -> writeIORef pc val
+        (V x)      -> M.write v x val
+        (Keypad x) -> M.write keypad x val
     
-    Dt .= a = flip writeIORef a . dt =<< ask
-    St .= a = flip writeIORef a . st =<< ask
-
-writeCpuMemory :: (Cpu -> IOVector a) -> a -> Int -> IOEmulator ()
-writeCpuMemory r a' i = do
-    m <- r <$> ask
-    liftIO $ M.write m i a'
+        Dt         -> writeIORef dt val
+        St         -> writeIORef st val
 
 indexGfx :: Integral a => a -> a -> a
 indexGfx x y = ((x `rem` 64) * 32) + (y `rem` 32)
