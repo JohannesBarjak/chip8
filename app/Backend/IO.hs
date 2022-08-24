@@ -78,17 +78,17 @@ instance MonadEmulator IOEmulator where
         gfx' <- gfx <$> ask
         liftIO $ M.copy gfx' =<< blankGfx
 
-    r %= f = ask >>= \cpu -> case r of
-        (Gfx x  y) -> liftIO $ M.modify (gfx cpu) f (indexGfx x y)
-        I          -> flip modifyIORef f . i =<< ask
-        (Memory x) -> liftIO $ M.modify (memory cpu) f x
+    r %= f = ask >>= \Cpu{..} -> case r of
+        (Gfx x  y) -> liftIO $ M.modify gfx f (indexGfx x y)
+        I          -> modifyIORef i f
+        (Memory x) -> liftIO $ M.modify memory f x
 
-        Pc         -> flip modifyIORef f . pc =<< ask
-        (V x)      -> liftIO $ M.modify (v cpu) f x
-        (Keypad x) -> liftIO $ M.modify (keypad cpu) f x
+        Pc         -> modifyIORef pc f
+        (V x)      -> liftIO $ M.modify v f x
+        (Keypad x) -> liftIO $ M.modify keypad f x
 
-        Dt         -> flip modifyIORef f . dt =<< ask
-        St         -> flip modifyIORef f . st =<< ask
+        Dt         -> modifyIORef dt f
+        St         -> modifyIORef st f
 
     (Gfx x y) .= p = writeCpuMemory gfx p (indexGfx x y)
     I .= a = flip writeIORef a . i =<< ask
