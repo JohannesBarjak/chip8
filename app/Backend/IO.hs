@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, FlexibleInstances, RecordWildCards, TypeFamilies, GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE GADTs, RecordWildCards, TypeFamilies, GeneralisedNewtypeDeriving #-}
 module Backend.IO (IOEmulator, initial) where
 
 import CPU
