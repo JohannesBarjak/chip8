@@ -94,7 +94,7 @@ toInstruction b0 b1 = toInstruction' byte
     where byte = (fromIntegral b0 `shiftL` 8) .|. fromIntegral b1
 
 toInstruction' :: Int -> Mode -> Instruction
-toInstruction' byte mode = case upper of
+toInstruction' instr mode = case upper of
         0x0 -> case (x,y,lower) of
             (0x0, 0xE, 0x0) -> ClearScreen
             (0x0, 0xE, 0xE) -> Return
@@ -144,10 +144,10 @@ toInstruction' byte mode = case upper of
             (0x6, 0x5) -> ReadMemory  x mode
             _ -> invalidInstruction
         _ -> invalidInstruction
-    where nnn   = byte .&. 0x0FFF
-          nn    = fromIntegral $ byte .&. 0xFF
-          (x,y) = bimapBoth (.&. 0xF) (byte `shiftR` 8, byte `shiftR` 4)
-          upper = byte `shiftR` 12
-          lower = byte .&. 0xF
+    where nnn   = instr .&. 0x0FFF
+          nn    = fromIntegral $ instr .&. 0xFF
+          (x,y) = bimapBoth (.&. 0xF) (instr `shiftR` 8, instr `shiftR` 4)
+          upper = instr `shiftR` 12
+          lower = instr .&. 0xF
           invalidInstruction = error $ "CPU: unsupported instruction: " <> invalid
           invalid = foldMap (toText . flip showHex "") [upper,x,y,lower]
