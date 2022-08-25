@@ -15,10 +15,11 @@ emulatorCycle ipc mode = do
 
 runInstruction :: MonadEmulator m => Mode -> m ()
 runInstruction mode = do
-    curPc <- look Pc
+    pc <- look Pc
     incPc
     
-    (b0, b1) <- look2 (Memory curPc) (Memory $ curPc + 1)
+    b0 <- rawMem pc
+    b1 <- rawMem (pc + 1)
     eval $ toInstruction b0 b1 mode
 
 eval :: MonadEmulator m => Instruction -> m ()
@@ -78,11 +79,10 @@ eval (Draw x y n) = do
     vf .= 0
 
     (vx, vy) <- bimapBoth fromIntegral <$> look2 (V x) (V y)
-    idx <- look I
 
     chunk <- for [0..n - 1] $ \dy -> do
         let yPos = vy + dy
-        sprite <- toSprite <$> look (Memory (idx + dy))
+        sprite <- toSprite <$> look (Memory dy)
         pixels <- traverse (look . flip Gfx yPos) [vx..vx + 7]
 
         pure $ zip sprite pixels
@@ -119,19 +119,19 @@ eval (GetKey  x) = do
     keys <- traverse (look . Keypad) [0..15]
     maybe (Pc -= 2) ((V x .=) . fromIntegral) (elemIndex True keys)
 eval (BCDConv x) = do
-    (vx, idx) <- look2 (V x) I
-    traverse_ ((.=) . Memory . (+ idx) <*> calcDigit vx) [0..2]
+    vx <- look (V x)
+    traverse_ (liftA2 (.=) Memory $ calcDigit vx) [0..2]
 
     where calcDigit vx n = (vx `quot` (100 `quot` 10^n)) `rem` 10
 
 eval (WriteMemory x m) = do
     idx <- look I
-    traverse_ ((=:) . Memory . (+ idx) <*> V) [0..x]
+    traverse_ (liftA2 (=:) Memory V) [0..x]
     when (m == CosmicVip) $ do
         I .= (idx + x + 1)
 eval (ReadMemory  x m) = do
     idx <- look I
-    traverse_ ((=:) . V <*> Memory . (+ idx)) [0..x]
+    traverse_ (liftA2 (=:) V Memory) [0..x]
     when (m == CosmicVip) $ do
         I .= (idx + x + 1)
 

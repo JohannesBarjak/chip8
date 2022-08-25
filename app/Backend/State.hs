@@ -52,7 +52,9 @@ instance MonadEmulator StateEmulator where
         case r of
             (Gfx x  y) -> fromMaybe False . (^?gfxWrapping x y) <$> get
             I          -> use i
-            (Memory x) -> pure (cpu^?!memory.ix x)
+            (Memory x) -> do
+                i' <- use i
+                pure $ cpu^?!memory.ix (i' + x)
             Pc         -> use pc
             (V x)      -> pure (cpu^?!v.ix x)
             (Keypad x) -> pure (cpu^?!keypad.ix x)
@@ -66,11 +68,16 @@ instance MonadEmulator StateEmulator where
         fromMaybe (error "CPU: empty stack") . P.uncons
 
     clearGfx = StateEmulator $ gfx L..= blankScreen
+    rawMem x = StateEmulator $ do
+        cpu <- get
+        pure $ cpu^?!memory.ix x
 
     r %= f = StateEmulator $ case r of
         (Gfx x  y) -> gfxWrapping x y L.%= f
         I          -> i L.%= f
-        (Memory x) -> memory.ix x L.%= f
+        (Memory x) -> do
+            i' <- use i
+            memory.ix (i' + x) L.%= f
         Pc         -> pc L.%= f
         (V x)      -> v.ix x L.%= f
         (Keypad x) -> keypad.ix x L.%= f
@@ -80,7 +87,9 @@ instance MonadEmulator StateEmulator where
     r .= val = StateEmulator $ case r of
         (Gfx x  y) -> gfxWrapping x y L..= val
         I          -> i L..= val
-        (Memory x) -> memory.ix x L..= val
+        (Memory x) -> do
+            i' <- use i
+            memory.ix (i' + x) L..= val
         Pc         -> pc L..= val
         (V x)      -> v.ix x L..= val
         (Keypad x) -> keypad.ix x L..= val

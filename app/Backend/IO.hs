@@ -46,17 +46,18 @@ instance MonadEmulator IOEmulator where
         a <- liftIO $ runReaderT r c
         pure (a, IOCpu c)
 
-    look ref = do
-        cpu <- ask
+    look ref = ask >>= \Cpu{..} ->
         liftIO $ case ref of
-            (Gfx x  y) -> M.read (gfx cpu) (indexGfx x y)
-            I          -> readIORef (i cpu)
-            (Memory x) -> M.read (memory cpu) x
-            Pc         -> readIORef (pc cpu)
-            (V x)      -> M.read (v cpu) x
-            (Keypad x) -> M.read (keypad cpu) x
-            Dt         -> readIORef (dt cpu)
-            St         -> readIORef (st cpu)
+            (Gfx x  y) -> M.read gfx (indexGfx x y)
+            I          -> readIORef i
+            (Memory x) -> do
+                i' <- readIORef i
+                M.read memory (i' + x)
+            Pc         -> readIORef pc
+            (V x)      -> M.read v x
+            (Keypad x) -> M.read keypad x
+            Dt         -> readIORef dt
+            St         -> readIORef st
 
     rand = do
         sd <- seed <$> ask
@@ -77,30 +78,37 @@ instance MonadEmulator IOEmulator where
     clearGfx = do
         gfx' <- gfx <$> ask
         liftIO $ M.copy gfx' =<< blankGfx
+    rawMem x = ask >>= \Cpu{..} -> liftIO $ M.read memory x
 
-    r %= f = ask >>= \Cpu{..} -> liftIO $ case r of
-        (Gfx x  y) -> M.modify gfx f (indexGfx x y)
-        I          -> modifyIORef i f
-        (Memory x) -> M.modify memory f x
+    r %= f = ask >>= \Cpu{..} ->
+        liftIO $ case r of
+            (Gfx x  y) -> M.modify gfx f (indexGfx x y)
+            I          -> modifyIORef i f
+            (Memory x) -> do
+                i' <- readIORef i
+                M.modify memory f (i' + x)
 
-        Pc         -> modifyIORef pc f
-        (V x)      -> M.modify v f x
-        (Keypad x) -> M.modify keypad f x
+            Pc         -> modifyIORef pc f
+            (V x)      -> M.modify v f x
+            (Keypad x) -> M.modify keypad f x
 
-        Dt         -> modifyIORef dt f
-        St         -> modifyIORef st f
+            Dt         -> modifyIORef dt f
+            St         -> modifyIORef st f
 
-    r .= val = ask >>= \Cpu{..} -> liftIO $ case r of
-        (Gfx x  y) -> M.write gfx (indexGfx x y) val
-        I          -> writeIORef i val
-        (Memory x) -> M.write memory x val
+    r .= val = ask >>= \Cpu{..} ->
+        liftIO $ case r of
+            (Gfx x  y) -> M.write gfx (indexGfx x y) val
+            I          -> writeIORef i val
+            (Memory x) -> do
+                i' <- readIORef i
+                M.write memory (i' + x) val
 
-        Pc         -> writeIORef pc val
-        (V x)      -> M.write v x val
-        (Keypad x) -> M.write keypad x val
+            Pc         -> writeIORef pc val
+            (V x)      -> M.write v x val
+            (Keypad x) -> M.write keypad x val
     
-        Dt         -> writeIORef dt val
-        St         -> writeIORef st val
+            Dt         -> writeIORef dt val
+            St         -> writeIORef st val
 
 indexGfx :: Integral a => a -> a -> a
 indexGfx x y = ((x `rem` 64) * 32) + (y `rem` 32)

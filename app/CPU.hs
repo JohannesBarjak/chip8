@@ -70,6 +70,7 @@ class Monad m => MonadEmulator m where
     pop      :: m Int
     rand     :: m Word8
     clearGfx :: m ()
+    rawMem   :: Int -> m Word8
     (%=)     :: Ref a -> (a -> a) -> m ()
     (.=)     :: Ref a -> a -> m ()
 
