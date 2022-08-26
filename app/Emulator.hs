@@ -6,7 +6,6 @@ import CPU
 import Data.Bits
 import Relude.Extra (bimapBoth)
 import Data.List (elemIndex)
-import Data.Traversable (for)
 
 emulatorCycle :: MonadEmulator m => Int -> CompatMode -> m ()
 emulatorCycle ipc mode = do
@@ -86,21 +85,18 @@ eval (Draw x y n) = do
 
     (vx, vy) <- bimapBoth fromIntegral <$> look2 (V x) (V y)
 
-    chunk <- for [0..n - 1] $ \dy -> do
+    for_ [0..n - 1] $ \dy -> do
         let yPos = vy + dy
         sprite <- toSprite <$> look (Memory dy)
-        pixels <- traverse (look . flip Gfx yPos) [vx..vx + 7]
 
-        pure $ zip sprite pixels
+        for_ (zip sprite [vx..vx + 7]) $ \(write, xPos) -> do
+            pixel <- look (Gfx xPos yPos)
 
-    setVFIf $ any (any $ uncurry (&&)) chunk
-    draw chunk vx vy
-
+            Gfx xPos yPos .= (write /= pixel)
+            setVFIf (write && pixel)
+    
     where toSprite sprite = [toBool $ (sprite `shiftR` idx) .&. 1 | idx <- [7,6..0]]
-          draw chunk vx vy =
-                for_ (zip chunk [vy..]) $ \(buf, yPos) ->
-                    for_ (zip buf [vx..]) $ \((write, pixel), xPos) ->
-                        Gfx xPos yPos .= (write /= pixel)
+          toBool = (/= 0)
 
 eval (SkipKey    x) = do
     vx <- fromIntegral <$> look (V x)
@@ -162,7 +158,3 @@ incPc = Pc += 2
 
 vf :: Ref Word8
 vf = V 0xF
-
-toBool :: Word8 -> Bool
-toBool 0 = False
-toBool _ = True
