@@ -8,12 +8,12 @@ import Relude.Extra (bimapBoth)
 import Data.List (elemIndex)
 import Data.Traversable (for)
 
-emulatorCycle :: MonadEmulator m => Int -> Mode -> m ()
+emulatorCycle :: MonadEmulator m => Int -> CompatMode -> m ()
 emulatorCycle ipc mode = do
     traverse_ (liftA2 whenM (fmap (> 0) . look) (-= 1)) [Dt, St]
     replicateM_ ipc (runInstruction mode)
 
-runInstruction :: MonadEmulator m => Mode -> m ()
+runInstruction :: MonadEmulator m => CompatMode -> m ()
 runInstruction mode = do
     pc <- look Pc
     incPc
@@ -124,14 +124,12 @@ eval (BCDConv x) = do
 
     where calcDigit vx n = (vx `quot` (100 `quot` 10^n)) `rem` 10
 
-eval (WriteMemory x m) = do
+eval (Slice a x m) = do
     idx <- look I
-    traverse_ (liftA2 (=:) Memory V) [0..x]
-    when (m == CosmicVip) $ do
-        I .= (idx + x + 1)
-eval (ReadMemory  x m) = do
-    idx <- look I
-    traverse_ (liftA2 (=:) V Memory) [0..x]
+    for_ [0..x] $ case a of
+        Write -> liftA2 (=:) Memory V
+        Read  -> liftA2 (=:) V Memory
+
     when (m == CosmicVip) $ do
         I .= (idx + x + 1)
 

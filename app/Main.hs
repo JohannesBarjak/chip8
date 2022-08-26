@@ -59,7 +59,7 @@ getRom filename = do
         then Just rom
         else Nothing
 
-runChip8 :: MonadEmulator m => CpuState m -> Mode -> IO ()
+runChip8 :: MonadEmulator m => CpuState m -> CompatMode -> IO ()
 runChip8 cpu mode =
     playIO
         (InWindow
@@ -76,7 +76,7 @@ runChip8 cpu mode =
         where fps = 60
               ipc = 500 `quot` fps
 
-runCycle :: (MonadEmulator m, MonadIO n) => Int -> Mode -> Emulator m -> n (Emulator m)
+runCycle :: (MonadEmulator m, MonadIO n) => Int -> CompatMode -> Emulator m -> n (Emulator m)
 runCycle ipc mode (Emulator cpu wSize False) = do
     (_, cpu') <- runIO (emulatorCycle ipc mode) cpu
     pure (Emulator cpu' wSize False)

@@ -4,7 +4,8 @@ module CPU
     , Ref(..)
     , Instruction(..)
     , Source(..)
-    , Mode(..)
+    , CompatMode(..)
+    , RW(..)
     , (<~), (=:), (+=), (-=)
     , toInstruction
     ) where
@@ -44,11 +45,12 @@ data Instruction
     | Font Int
     | GetKey Int
     | BCDConv Int
-    | WriteMemory Int Mode
-    | ReadMemory Int Mode
+    | Slice RW Int CompatMode
 
-data Source = VI Int | NN Word8
-data Mode   = Chip48 | CosmicVip deriving Eq
+data RW = Read | Write
+
+data Source     = VI Int | NN Word8
+data CompatMode = Chip48 | CosmicVip deriving Eq
 
 data Ref a where
     Gfx    :: Int -> Int -> Ref Bool
@@ -90,11 +92,11 @@ ref += val = ref %= (+val)
 (-=) :: (MonadEmulator m, Num a) => Ref a -> a -> m ()
 ref -= val = ref %= subtract val
 
-toInstruction :: Word8 -> Word8 -> Mode -> Instruction
+toInstruction :: Word8 -> Word8 -> CompatMode -> Instruction
 toInstruction b0 b1 = toInstruction' instr
     where instr = (fromIntegral b0 `shiftL` 8) .|. fromIntegral b1
 
-toInstruction' :: Int -> Mode -> Instruction
+toInstruction' :: Int -> CompatMode -> Instruction
 toInstruction' instr mode = case upper of
         0x0 -> case (x,y,lower) of
             (0x0, 0xE, 0x0) -> ClearScreen
@@ -141,8 +143,8 @@ toInstruction' instr mode = case upper of
             (0x2, 0x9) -> Font     x
             (0x0, 0xA) -> GetKey   x
             (0x3, 0x3) -> BCDConv  x
-            (0x5, 0x5) -> WriteMemory x mode
-            (0x6, 0x5) -> ReadMemory  x mode
+            (0x5, 0x5) -> Slice Write x mode
+            (0x6, 0x5) -> Slice Read  x mode
             _ -> invalidInstruction
         _ -> invalidInstruction
     where nnn   = instr .&. 0x0FFF
