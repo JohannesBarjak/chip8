@@ -24,7 +24,8 @@ runInstruction mode = do
 
 eval :: MonadEmulator m => Instruction -> m ()
 eval ClearScreen = clearGfx
-eval Return = jmp =<< pop
+eval Return      = jmp =<< pop
+
 eval (Jmp  addr) = jmp addr
 eval (Call addr) = do
     push =<< look Pc
@@ -38,6 +39,7 @@ eval (SkipNotEq x (VI  y)) = skipIf =<< liftR2 (/=) (V x) (V y)
 eval (Set x (NN nn)) = V x .= nn
 eval (Set x (VI  y)) = V x =: V y
 eval (Add x (NN nn)) = V x += nn
+
 eval (Add x (VI  y)) = do
     (vx, vy) <- look2 (V x) (V y)
     V x += vy
@@ -47,6 +49,7 @@ eval (Sub x  y) = do
     (vx, vy) <- look2 (V x) (V y)
     V x -= vy
     vf .= bool 1 0 (vy > vx)
+
 eval (SubN x y) = do
     (vx, vy) <- look2 (V x) (V y)
     V x .= vy - vx
@@ -58,6 +61,7 @@ eval (ShiftRight x my) = do
     vx <- look (V x)
     V x .= vx `shiftR` 1
     vf .= vx .&. 1
+
 eval (ShiftLeft  x my) = do
     whenJust my $ \y -> V x =: V y
 
@@ -70,9 +74,11 @@ eval (And x y) = V x <~ liftR2 (.&.) (V x) (V y)
 eval (Xor x y) = V x <~ liftR2  xor  (V x) (V y)
 
 eval (Index addr) = I .= addr
+
 eval (JmpOff mx addr) = do
     vx <- look . V $ fromMaybe 0 mx
     jmp (addr + fromIntegral vx)
+
 eval (Rand  x nn) = V x <~ fmap (.&. nn) rand
 
 eval (Draw x y n) = do
@@ -99,6 +105,7 @@ eval (Draw x y n) = do
 eval (SkipKey    x) = do
     vx <- fromIntegral <$> look (V x)
     skipIf =<< look (Keypad vx)
+
 eval (SkipNotKey x) = do
     vx <- fromIntegral <$> look (V x)
     skipIf . not =<< look (Keypad vx)
@@ -111,6 +118,7 @@ eval (AddIndex x) = do
     vx <- look (V x)
     I += fromIntegral vx
     setVFIf . (> 0xFFF) =<< look I
+
 eval (Font     x) = do
     vx <- look (V x)
     I .= fromIntegral (vx .&. 0xF) * 5
@@ -118,6 +126,7 @@ eval (Font     x) = do
 eval (GetKey  x) = do
     keys <- traverse (look . Keypad) [0..15]
     maybe (Pc -= 2) ((V x .=) . fromIntegral) (elemIndex True keys)
+
 eval (BCDConv x) = do
     vx <- look (V x)
     traverse_ (liftA2 (.=) Memory $ calcDigit vx) [0..2]
