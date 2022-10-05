@@ -1,4 +1,8 @@
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, GADTs, TypeFamilies, GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE TypeFamilies               #-}
 module Backend.State (StateEmulator, initial) where
 
 import Prelude as P

@@ -7,11 +7,13 @@ import Data.Bits
 import Relude.Extra (bimapBoth)
 import Data.List (elemIndex)
 
+-- Decrement timers and run the necessary number of instructions per cycle
 emulatorCycle :: MonadEmulator m => Int -> CompatMode -> m ()
 emulatorCycle ipc mode = do
     traverse_ (liftA2 whenM (fmap (> 0) . look) (-= 1)) [Dt, St]
     replicateM_ ipc (runInstruction mode)
 
+-- Fetch and Execute an instruction
 runInstruction :: MonadEmulator m => CompatMode -> m ()
 runInstruction mode = do
     pc <- look Pc

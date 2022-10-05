@@ -1,4 +1,6 @@
-{-# LANGUAGE GADTs, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeFamilies      #-}
 module CPU
     ( MonadEmulator(..)
     , Ref(..)
@@ -16,6 +18,7 @@ import Numeric (showHex)
 import Prelude as P
 import Relude.Extra (bimapBoth)
 
+-- Cpu Instruction Set
 data Instruction
     = ClearScreen
     | Return
@@ -52,6 +55,8 @@ data RW = Read | Write
 data Source     = VI Int | NN Word8
 data CompatMode = Chip48 | CosmicVip deriving Eq
 
+-- Accessor GADTs to provide a uniform api for
+-- mutation and access
 data Ref a where
     Gfx    :: Int -> Int -> Ref Bool
     I      :: Ref Int
@@ -78,6 +83,7 @@ class Monad m => MonadEmulator m where
 
     infix 4 %=, .=
 
+-- Infix functions insipired by the lens library
 infix 4 <~, =:, +=, -=
 
 (<~) :: MonadEmulator m => Ref a -> m a -> m ()
@@ -102,6 +108,7 @@ toInstruction' instr mode = case upper of
             (0x0, 0xE, 0x0) -> ClearScreen
             (0x0, 0xE, 0xE) -> Return
             _ -> invalidInstruction
+
         0x1 -> Jmp  nnn
         0x2 -> Call nnn
         0x3 -> SkipEq    x (NN nn)
@@ -109,6 +116,7 @@ toInstruction' instr mode = case upper of
         0x5 -> SkipEq    x (VI  y)
         0x6 -> Set x (NN nn)
         0x7 -> Add x (NN nn)
+
         0x8 -> case lower of
             0x0 -> Set x (VI y)
             0x1 -> Or  x y
@@ -124,17 +132,20 @@ toInstruction' instr mode = case upper of
                 Chip48    -> ShiftLeft x Nothing
                 CosmicVip -> ShiftLeft x (Just y)
             _ -> invalidInstruction
+
         0x9 | lower == 0 -> SkipNotEq x (VI y)
         0xA -> Index    nnn
         0xB -> case mode of
             Chip48    -> JmpOff (Just x) nnn
             CosmicVip -> JmpOff Nothing  nnn
+
         0xC -> Rand x nn
         0xD -> Draw x y lower
         0xE -> case (y,lower) of
             (0x9, 0xE) -> SkipKey    x
             (0xA, 0x1) -> SkipNotKey x
             _ -> invalidInstruction
+
         0xF -> case (y,lower) of
             (0x0, 0x7) -> GetDelay x
             (0x1, 0x5) -> SetDelay x
@@ -147,10 +158,12 @@ toInstruction' instr mode = case upper of
             (0x6, 0x5) -> Slice Read  x mode
             _ -> invalidInstruction
         _ -> invalidInstruction
+
     where nnn   = instr .&. 0x0FFF
           nn    = fromIntegral $ instr .&. 0xFF
           (x,y) = bimapBoth (.&. 0xF) (instr `shiftR` 8, instr `shiftR` 4)
           upper = instr `shiftR` 12
           lower = instr .&. 0xF
+
           invalidInstruction = error $ "CPU: unsupported instruction: " <> invalid
           invalid = foldMap (toText . flip showHex "") [upper,x,y,lower]

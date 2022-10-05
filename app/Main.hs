@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedLists, RecordWildCards #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE RecordWildCards #-}
 module Main where
 
 import Emulator
