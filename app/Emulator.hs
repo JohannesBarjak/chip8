@@ -23,6 +23,7 @@ runInstruction mode = do
     b1 <- rawMem (pc + 1)
     eval $ toInstruction b0 b1 mode
 
+-- Eval instruction
 eval :: MonadEmulator m => Instruction -> m ()
 eval ClearScreen = clearGfx
 eval Return      = jmp =<< pop
@@ -57,6 +58,7 @@ eval (SubN x y) = do
     vf .= bool 1 0 (vx > vy)
 
 eval (ShiftRight x my) = do
+    -- When in cosmic vip mode assign to vx
     whenJust my $ \y -> V x =: V y
 
     vx <- look (V x)
@@ -64,6 +66,7 @@ eval (ShiftRight x my) = do
     vf .= vx .&. 1
 
 eval (ShiftLeft  x my) = do
+    -- When in cosmic vip mode assign to vx
     whenJust my $ \y -> V x =: V y
 
     vx <- look (V x)
@@ -87,17 +90,21 @@ eval (Draw x y n) = do
 
     (vx, vy) <- bimapBoth fromIntegral <$> look2 (V x) (V y)
 
+    -- draws a sprite by getting the
+    -- nth sprite row and xoring the row's pixels
+    -- at the appropriate location
     for_ [0..n - 1] $ \dy -> do
         let yPos = vy + dy
-        sprite <- toSprite <$> look (Memory dy)
+        row <- spriteRow <$> look (Memory dy)
 
-        for_ (zip sprite [vx..vx + 7]) $ \(write, xPos) -> do
+        for_ (zip row [vx..vx + 7]) $ \(write, xPos) -> do
             pixel <- look (Gfx xPos yPos)
+            Gfx xPos yPos .= xor write pixel
 
-            Gfx xPos yPos .= (write /= pixel)
+            -- collision detection
             setVFIf (write && pixel)
-    
-    where toSprite sprite = [toBool $ (sprite `shiftR` idx) .&. 1 | idx <- [7,6..0]]
+
+    where spriteRow byte = [toBool $ (byte `shiftR` idx) .&. 1 | idx <- [7,6..0]]
           toBool = (/= 0)
 
 eval (SkipKey    x) = do

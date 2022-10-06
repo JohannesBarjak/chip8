@@ -118,11 +118,13 @@ displayScreen (w, h) = fmap pictures . sequence $ do
     x <- [0..63]
     let xOffset = (width - size * 64) / 2
     let xPos = fromIntegral x * size - width / 2
+
     y <- [0..31]
     let yOffset = (height - size * 32) / 2
     let yPos = fromIntegral (y + 1) * (-size) + height / 2
 
     pure $ pixelImage (xPos + xOffset) (yPos - yOffset) size <$> look (Gfx x y)
+
     where size = pixelSize width height
           width  = fromIntegral w
           height = fromIntegral h
