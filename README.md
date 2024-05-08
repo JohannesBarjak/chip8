@@ -21,4 +21,4 @@ chip8 /path/to/rom.ch8 cosmic
 ```
 
 ## Screenshots
-<img alt="Snake" src="./screenshots/snake.png" width="25%"> <img alt="Rock, Paper, Scissors" src="./screenshots/RPS.png" width="25%"> <img alt="Piper" src="./screenshots/piper.png" width="25%">
+<img alt="Snake" src="./screenshots/snake.png" width="33%"> <img alt="Rock, Paper, Scissors" src="./screenshots/RPS.png" width="33%"> <img alt="Piper" src="./screenshots/piper.png" width="33%">
