@@ -19,3 +19,8 @@ compatibility with CosmicVip instructions.
 ```shell
 chip8 /path/to/rom.ch8 cosmic
 ```
+
+## Screenshots
+![Snake](./screenshots/snake.png)
+![RPS](./screenshots/RPS.png)
+![Piper](./screenshots/piper.png)
