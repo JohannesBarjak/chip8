@@ -12,7 +12,7 @@ module CPU
     , toInstruction
     ) where
 
-import Data.Bits
+import Data.Bits (shiftR, shiftL, (.|.), (.&.))
 import Numeric (showHex)
 
 import Prelude as P

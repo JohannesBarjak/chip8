@@ -3,7 +3,7 @@ module Emulator (emulatorCycle) where
 
 import CPU
 
-import Data.Bits
+import Data.Bits (shiftL, shiftR, (.|.), (.&.))
 import Relude.Extra (bimapBoth)
 import Data.List (elemIndex)
 
